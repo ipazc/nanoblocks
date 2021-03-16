@@ -1,0 +1,3 @@
+
+class PaymentTimeoutError(Exception):
+    pass

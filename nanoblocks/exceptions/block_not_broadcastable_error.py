@@ -1,0 +1,3 @@
+
+class BlockNotBroadcastableError(Exception):
+    pass

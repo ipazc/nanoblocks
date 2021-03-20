@@ -106,7 +106,25 @@ class Accounts:
 
 class Account:
     """
-    Handles a single account in the Nano network
+    Handles a single account in the Nano network.
+
+    Contains all the methods that allows to interact with accounts, like reading the state, sending/receiving amounts or
+    reading the blockchain of the account.
+
+    By default every account is read-only, unless a private key is available.
+
+    :param nano_address:
+        Nano address of the account. E.g "nano_...".
+
+    :param node_backend:
+        A Node object pointing to a working Nano node.
+        Note that this class may work off-line, which allows the retrieval of public keys.
+
+    :param initial_update:
+        Flag to determine if the account should be updated at start or not.
+
+    :param default_work_server:
+        The default work_server to use in case no work is provided.
     """
 
     def __init__(self, nano_address, node_backend=NO_NODE, initial_update=True, default_work_server=None):
@@ -453,9 +471,12 @@ class Account:
 
     def build_send_block(self, account_target, nano_amount, work_hash=None):
         """
-        Builds the send transaction to be sent to the network.
+        Builds and signs the send transaction block and returns it.
 
-        The returned block object can be broadcasted using the `Network.broadcast_block(block)`.
+        Note that this method does not broadcast the block, but returns it wrapped in a :class:`nanoblocks.block.BlockSend` class.
+
+        The returned block object can be broadcasted using the method :meth:`~nanoblocks.block.Blocks.broadcast`
+        from the property :attr:`~nanoblocks.network.NanoNetwork.blocks` of the class :class:`nanoblocks.network.NanoNetwork`.
 
         :param account_target:
             Account target for the send. It can be either an Account object or a string with the public address.
@@ -500,9 +521,15 @@ class Account:
 
     def build_receive_block(self, pending_block, work_hash=None):
         """
-        Build a receive block for specified pending block.
+        Builds and signs the receive transaction block for the specified pending block and returns it.
 
-        A pending block can be obtained by iterating over the `account.pending_transactions` property.
+        Note that this method does not broadcast the block, but returns it wrapped in a :class:`nanoblocks.block.BlockReceive` class.
+
+        The returned block object can be broadcasted using the method :meth:`~nanoblocks.block.Blocks.broadcast`
+        from the property :attr:`~nanoblocks.network.NanoNetwork.blocks` of the class :class:`nanoblocks.network.NanoNetwork`.
+
+        A pending block can be obtained by iterating over the :attr:`~nanoblocks.account.Account.pending_transactions` property
+        of the class :class:`nanoblocks.account.Account`.
 
         :param pending_block:
             Pending block to receive from.

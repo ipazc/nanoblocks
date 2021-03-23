@@ -17,18 +17,20 @@ if sys.version_info < (3, 4, 1):
     sys.exit('Python < 3.4.1 is not supported!')
 
 
-setup(name='mtcnn',
+setup(name='nanoblocks',
       version=__version__,
-      description='Multi-task Cascaded Convolutional Neural Networks for Face Detection, based on TensorFlow',
+      description='Another unofficial Python package for managing Nano Cryptocurrency',
       long_description=readme(),
-      url='http://github.com/ipazc/mtcnn',
+      url='http://github.com/ipazc/nanoblocks',
       author='Iván de Paz Centeno',
       author_email='ipazc@unileon.es',
       license='MIT',
       packages=setuptools.find_packages(exclude=["tests.*", "tests"]),
       install_requires=[
-          "keras>=2.0.0",
-          "opencv-python>=4.1.0"
+          "requests>=2.18.4",
+          "qrcode[pil]>=6.1",
+          "pandas>=1.1.0",
+          "numpy>=1.18.1"
       ],
       classifiers=[
           'Environment :: Console',
@@ -44,5 +46,5 @@ setup(name='mtcnn',
       test_suite='nose.collector',
       tests_require=['nose'],
       include_package_data=True,
-      keywords="mtcnn face detection tensorflow pip package",
+      keywords="nano protocol cryptocurrency python package wrapper nanoblocks",
       zip_safe=False)

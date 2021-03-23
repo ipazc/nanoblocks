@@ -1,4 +1,5 @@
 .. image:: https://github.com/ipazc/nanoblocks/raw/main/docs/source/tutorial/images/logo_big.png
+    :target: https://nanoblocks.readthedocs.io/en/latest/
 
 .. image:: https://badge.fury.io/py/nanoblocks.svg
     :target: https://badge.fury.io/py/nanoblocks

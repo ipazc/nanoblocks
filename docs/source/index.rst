@@ -3,10 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: /tutorial/images/logo_big.png
+.. image:: https://github.com/ipazc/nanoblocks/raw/main/docs/source/tutorial/images/logo_big.png
 
 NanoBlocks
 ==========
+
+.. image:: https://badge.fury.io/py/nanoblocks.svg
+    :target: https://badge.fury.io/py/nanoblocks
 
 `NanoBlocks` is an object-oriented API implementation of the Nano RPC that eases the communication with the Nano protocol.
 

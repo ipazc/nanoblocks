@@ -1,7 +1,4 @@
-.. raw:: html
-   <h1 align="center">
-   <img width="450" src="docs/source/tutorial/images/logo.png" alt="NanoBlocks">
-   </h1>
+.. image:: docs/source/tutorial/images/logo_big.png
 
 NanoBlocks
 ==========

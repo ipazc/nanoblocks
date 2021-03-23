@@ -18,3 +18,4 @@ Getting started
    /tutorial/what_is_nano.rst
    /tutorial/what_is_nanoblocks.rst
    /tutorial/getting_started.rst
+   /tutorial/nanoblocks_transactions.rst

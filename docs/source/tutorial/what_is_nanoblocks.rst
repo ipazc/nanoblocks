@@ -12,15 +12,15 @@ Basic concepts
 
 .. image:: /tutorial/images/NanoBlocks_schema.png
 
-This schema is implemented as-is in NanoBlocks, meaning that there exist the corresponding classes :class:`NanoNode <nanoblocks.node.nanonode.NanoNode>`, :class:`NanoNetwork <nanoblocks.network.nano_network.NanoNetwork>`, `Blocks <../nanoblocks.block.html>`_, :class:`Account <nanoblocks.account.account.Account>` and :class:`Wallet <nanoblocks.wallet.wallet.Wallet>`.
+This schema is implemented as-is in NanoBlocks, meaning that there exist the corresponding classes :class:`NanoNode <nanoblocks.node.NanoNode>`, :class:`NanoNetwork <nanoblocks.network.NanoNetwork>`, `Blocks <../nanoblocks.block.html>`_, :class:`Account <nanoblocks.account.Account>` and :class:`Wallet <nanoblocks.wallet.Wallet>`.
 These 5 classes are interrelated to each other as shown by the arrows present in the schema image, which makes it extremely easy to flow.
 
- * :class:`NanoNode <nanoblocks.node.nanonode.NanoNode>` Is a class that contains the addresses of the RPC HTTP, WebSocket and RemoteWorkServer (if available). It also wraps simple communication mechanism for each. All the objects in the package usually have access to this object.
+ * :class:`NanoNode <nanoblocks.node.NanoNode>` Is a class that contains the addresses of the RPC HTTP, WebSocket and RemoteWorkServer (if available). It also wraps simple communication mechanism for each. All the objects in the package usually have access to this object.
 
- * :class:`NanoNetwork <nanoblocks.network.nano_network.NanoNetwork>` Is a class that gives a simple interface to the Nano network. It provides access to accounts, blocks and wallets. Also, it is responsible of broadcasting blocks to the network.
+ * :class:`NanoNetwork <nanoblocks.network.NanoNetwork>` Is a class that gives a simple interface to the Nano network. It provides access to accounts, blocks and wallets. Also, it is responsible of broadcasting blocks to the network.
 
- * :class:`Account <nanoblocks.account.account.Account>` Is a class that interfaces one account. It gives access to the account information (balance, representative, frontier, ...) and more complex information like the blockchain history and pending transactions. Furthermore, allows to build transaction blocks, which can be later broadcasted to the network.
+ * :class:`Account <nanoblocks.account.Account>` Is a class that interfaces one account. It gives access to the account information (balance, representative, frontier, ...) and more complex information like the blockchain history and pending transactions. Furthermore, allows to build transaction blocks, which can be later broadcasted to the network.
 
  * `Blocks <../nanoblocks.block.html>`_ Is a set of classes that interfaces the basic blocks operations in Nano. In this package, the blocks are specialized into 3 classes: `BlockSend`, `BlockReceive` and `BlockState`. If you still don't know what a block in Nano is, you should first read the `official documentation of Nano <https://docs.nano.org/integration-guides/the-basics/>`_ to get full overview.
 
- * :class:`Wallet <nanoblocks.wallet.wallet.Wallet>` Is a class that allows handling a wallet. It can access existing wallets through the seed or the BIP39 mnemonic word list, or generate new cryptographic secure wallets. This class can even work offline, without a node attached to the network, meaning that you can access or create wallets without internet.
+ * :class:`Wallet <nanoblocks.wallet.Wallet>` Is a class that allows handling a wallet. It can access existing wallets through the seed or the BIP39 mnemonic word list, or generate new cryptographic secure wallets. This class can even work offline, without a node attached to the network, meaning that you can access or create wallets without internet.

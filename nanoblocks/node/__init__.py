@@ -5,4 +5,4 @@ Nano node wrapper.
 
 from .nanonode import NanoNode
 
-#__all__ = ["NanoNode"]
+__all__ = ["NanoNode"]

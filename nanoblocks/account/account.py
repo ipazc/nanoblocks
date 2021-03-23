@@ -114,7 +114,7 @@ class Account:
     By default every account is read-only, unless a private key is available.
 
     :param nano_address:
-        Nano address of the account. E.g "nano_...".
+        Nano address of the account. E.g "nano_3pyz..".
 
     :param node_backend:
         A Node object pointing to a working Nano node.
@@ -131,7 +131,7 @@ class Account:
         """
 
         :param nano_address:
-            Nano address of the account. E.g "nano_...".
+            Nano address of the account. E.g "nano_3pyz...".
 
         :param node_backend:
             A Node object pointing to a working Nano node.
@@ -226,7 +226,7 @@ class Account:
     @property
     def address(self):
         """
-        Provides the account nanoblocks address of this account. E.g. "nano_..."
+        Provides the account nanoblocks address of this account. E.g. "nano_3pyz..."
         """
         return self._nano_address
 
@@ -250,7 +250,18 @@ class Account:
         Provides the frontier block hash for this account.
         In case of a new account, this frontier is 0.
         """
-        return self._account_info['frontier']
+
+        if self._node_backend.is_online:
+            from nanoblocks.block import Blocks
+            blocks = Blocks(node_backend=self._node_backend, work_server=self._work_server)
+            frontier_block = blocks[self._account_info['frontier']]
+
+        else:
+            from nanoblocks.block import Block
+            frontier_block = Block(self, {'type': 'Unknown', 'balance': 'Unknown', 'hash': self._account_info['frontier']}, node_backend=self._node_backend,
+                                   work_server=self._work_server)
+
+        return frontier_block
 
     @property
     def info(self):
@@ -455,6 +466,8 @@ class Account:
 
         When an account info is filled within the account object, you are then able to send or receive blocks
 
+        .. code-block:: python
+
             account_info_example = {
                 "frontier": "FF84533A571D953A596EA401FD41743AC85D04F406E76FDE4408EAED50B473C5",
                 "open_block": "991CF190094C00F0B68E2E5F75F6BEE95A2E0BD93CEAA4A6734DB9F19B728948",
@@ -601,7 +614,7 @@ class Account:
             "account": self.public_key,
             "link": link,
             "balance": balance.as_raw().to_hex(16),
-            "previous": self.frontier,
+            "previous": self.frontier.hash,
             "representative": representative.public_key
         }
 
@@ -618,7 +631,7 @@ class Account:
             "type": "state",
             "subtype": subtype,
             "account": self.address,
-            "previous": self.frontier,
+            "previous": self.frontier.hash,
             "representative": representative.address,
             "link": link,
             "balance": balance.as_raw().int_str(),

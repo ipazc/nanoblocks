@@ -1,5 +1,3 @@
-import numpy as np
-
 from nanoblocks.account.account import Account
 from nanoblocks.block.block import Blocks
 from nanoblocks.node import NanoNode

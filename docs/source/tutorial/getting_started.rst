@@ -25,8 +25,7 @@ The entry point to the network is the class :class:`NanoNetwork <nanoblocks.netw
     >>> from nanoblocks.node import NanoNode
     >>> from nanoblocks.network import NanoNetwork
 
-    >>> node = NanoNode(rest_api_url="http://localhost:7076",
-                        websocket_api_url="ws://localhost:7078")
+    >>> node = NanoNode(rest_api_url="http://localhost:7076", websocket_api_url="ws://localhost:7078")
     >>> node
     [Node http://localhost:7076 (Nano V21.3)]
 
@@ -39,6 +38,11 @@ The `network` object contains access to three basic members: the `blocks` in the
 
 Accessing an account
 --------------------
+
+One of the most interesting functionalities in most criptocurrencies is that the ledger is public and all the accounts
+can be accessed. Accessing an account means reading its balance and its blockchain (history of transactions).
+
+Note that `accessing an account` != `controlling an account`, as for controlling an account it requires you to have the corresponding `private key` (which is different from the wallet seed!).
 
 Given the `network` object, accessing an account can be done as follows:
 
@@ -57,7 +61,7 @@ Given the `network` object, accessing an account can be done as follows:
 
 
 You might have noticed well: `network.accounts[]` behaves like a python dictionary, which in turns makes it easy to access any account in the network.
-In `NanoBlocks`, every account is wrapped inside the class :class:`Account <nanoblocks.account.account.Account>` which gives basic functionality for account handling:
+In `NanoBlocks`, every account is wrapped inside the class :class:`Account <nanoblocks.account.Account>` which gives basic functionality for account handling:
 
 .. code-block:: python
 
@@ -102,7 +106,7 @@ If you know a block hash and you want to check its information, it can be done i
         Amount: 0.000040000000000000000000000000
         Local date: 1970-01-01 01:00:00+01:00
 
-Every Block is wrapped inside the class derived from :class:`Block <nanoblocks.block.block.Block>`, which can in turn be a :class:`BlockSend <nanoblocks.block.block_send.BlockSend>`, a :class:`BlockReceive <nanoblocks.block.block_receive.BlockReceive>` or a :class:`BlockState <nanoblocks.block.block_send.BlockState>`.
+Every Block is wrapped inside the class derived from :class:`Block <nanoblocks.block.block.Block>`, which can in turn be a :class:`BlockSend <nanoblocks.block.block_send.BlockSend>`, a :class:`BlockReceive <nanoblocks.block.block_receive.BlockReceive>` or a :class:`BlockState <nanoblocks.block.block_state.BlockState>`.
 The main difference between each `block` implementation is the arrangement of the fields and the way they are displayed when printed.
 
 Check the block docs to know what methods and attributes are available for each.
@@ -110,8 +114,8 @@ Check the block docs to know what methods and attributes are available for each.
 Accessing a wallet
 ------------------
 
-Likely to the rest, the wallets can be accessed in the exact same way. The property `wallets` in the `network` object
-gives access to a wallet by the seed or the bip39-mnemonic 24-word phrase.
+Wallets can be accessed by using the property `wallets` of the `network` object, which
+gives access by the seed or the bip39-mnemonic 24-word phrase.
 
 .. code-block:: python
 
@@ -127,3 +131,114 @@ gives access to a wallet by the seed or the bip39-mnemonic 24-word phrase.
 
     >>> print(wallet.mnemonic)
     ['legal', 'bone', 'parent', 'sunset', 'shed', 'expand', 'ghost', 'airport', 'stone', 'favorite', 'innocent', 'inquiry', 'regular', 'ridge', 'life', 'shift', 'electric', 'dinner', 'kiss', 'blast', 'rain', 'pottery', 'daughter', 'execute']
+
+Creating new wallets
+^^^^^^^^^^^^^^^^^^^^
+
+New wallets can be created with a single line of code:
+
+.. code-block:: python
+
+    >>> new_wallet = network.wallets.create()
+
+
+You can then print the seed and/or the mnemonic BIP39 24-word list from it.
+
+The creation of the wallet relies on the random seed number generator from the operating system,
+which is considered to be cryptographically secure.
+
+Note that this method does not require to have a node attached. This means that it can run completely offline (even without internet):
+
+.. code-block:: python
+
+    >>> from nanoblocks.network import NanoNetwork
+    >>> network = NanoNetwork()  # No node attached
+    >>> wallet = network.wallets.create()
+
+This happens because `NanoBlocks` integrates all the cryptographic functions required to create wallets and accounts.
+
+Creating wallet accounts
+^^^^^^^^^^^^^^^^^^^^^^^^
+Wallets are the basic building block in Nano, as they allow you to create accounts. Every wallet can create 2^32 accounts, which is an extremely big number (4294967296).
+Every account in a wallet is deterministically indexed by an integer in the range [0, 2^32]. They can be easily created as follows:
+
+.. code-block:: python
+
+    >>> account_0 = wallet.accounts[0]
+    >>> account_1 = wallet.accounts[1]
+
+The account at every index is always the same account, no matter which software wallet you use. This means that the wallet at a given index is the same in NanoBlocks, in Natrium, Nault or any other wallet software.
+Note that this process can still be done offline, as it is not required nodes to create accounts.
+
+When an account is new and doesn't have blockchain, it is considered `virtual`. A virtual account becomes real in the
+ledger of the nodes as soon as it publish a `BlockReceive`, which requires someone sending to it a `BlockSend` with some amount first.
+
+All the accounts accessed through a wallet are automatically unlocked with the corresponding `private key`. This allows you to create and sign blocks in its blockchain. You can check the private key of an account as follows:
+
+.. code-block:: python
+
+    >>> account_0_privkey = account_0.private_key
+
+Furthermore, if you have the private key, you can unlock it at any time directly without the need of the wallet:
+
+.. code-block:: python
+
+    >>> account_0 = network.accounts['account_0_address']
+    >>> account_0.unlock(account_0_privkey)
+
+
+Requesting payments
+-------------------
+
+With `NanoBlocks`, requesting a payment for an account can be simplified in two lines of code.
+Any `Account` in the network can be used to request a payment through its method `request_payment()`.
+When invoked, a Nano amount is passed as parameter and a :class:`Payment <nanoblocks.account.payment.Payment>` object is returned, which gives an easy interface to the payment process.
+
+.. code-block:: python
+
+    >>> account = network.accounts['nano_1nween66fcspgkx33defgtmypgzkqf4heihaubqwjyhjrwma5qz4z9r45szj']
+    >>> payment = account.request_payment("0.1") # In Nano units
+
+
+The `Payment` object can be used to generate a payment link
+
+
+.. code-block:: python
+
+    >>> print(payment.uri)
+    nano:nano_1nween66fcspgkx33defgtmypgzkqf4heihaubqwjyhjrwma5qz4z9r45szj?amount=100000000000000000000000000000
+
+It can also generate QR codes as PIL images, which can be scanned by any modern wallet software like Natrium or Nault:
+
+.. code-block:: python
+
+    >>> qr_image = payment.qr_code
+    >>> qr_code.show()
+
+.. image:: /tutorial/images/qr_code_donate.jpg
+
+*(ps: if you like the project, donations are accepted by using this very same QR code image!)*
+
+And the most interesting method of the `payment` object is the `wait()` method, which allows to lock the thread until
+a payment is detected (or until the timeout raises):
+
+.. code-block:: python
+
+    >>> block = payment.wait(timeout=30)
+    >>> block
+
+The `wait()` method accepts a `timeout` parameter in seconds. When the payment is processed, the corresponding `SendBlock`
+is immediately returned back to you. This block is useful as you can track the confirmation of the block and build the
+corresponding `ReceiveBlock` to convert the pending transaction in confirmed transaction, in case you have control
+over the account.
+
+
+Note that no private keys are involved in the process yet, meaning that **any** account can be used for this operation.
+
+
+Sending and receiving Nano
+--------------------------
+
+Sending and receiving Nano are tightly coupled with block handling and work generation. Since it is a little more
+complex (not so much!) than the concepts and uses explained here, it has its own document. Everything is explained in
+the following section, so take a breath first before diving!

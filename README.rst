@@ -3,7 +3,7 @@ NanoBlocks
 
 *Note: this package is in _alpha_ state, meaning that it should not be used under production environments, and only for testing purposes!!*
 
-.. image:: docs/source/tutorial/images/NanoBlocks_schema.png
+.. image:: docs/source/tutorial/images/logo.png
 
 `NANO <https://nano.org/>`_ is a cryptocurrency that allows instant and feeless transactions, making it a viable solution for micropayments.
 
@@ -46,6 +46,7 @@ Everything starts with the `NanoNode` and the `NanoNetwork` classes:
 Having a `NanoNetwork` class instance, accounts in the network can be accessed as easy as follows:
 
 .. code-block:: python
+
     >>> account = network.accounts["nano_39a73oy5ungrhxy5z5oao1xso4zo7dmgpjd4u74xcrx3r1w6rtazuouw6qfi"]
     >>> account
     nano_39a73oy5ungrhxy5z5oao1xso4zo7dmgpjd4u74xcrx3r1w6rtazuouw6qfi (
@@ -60,6 +61,7 @@ Having a `NanoNetwork` class instance, accounts in the network can be accessed a
 Blocks can be accessed as follows:
 
 .. code-block:: python
+
     >>> block = network.blocks["4FEC4BDD078C741F599221C67C8BE6493C872EF9B30968BBF4991640FFF42DA2"]
     >>> block
     [Block #4 from account nano_39a73oy5ungrhxy5z5oao1xso4zo7dmgpjd4u74xcrx3r1w6rtazuouw6qfi]

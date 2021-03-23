@@ -1,15 +1,16 @@
+.. raw:: html
+   <h1 align="center">
+   <img width="450" src="docs/source/tutorial/images/logo.png" alt="NanoBlocks">
+   </h1>
+
 NanoBlocks
 ==========
-
-*Note: this package is in _alpha_ state, meaning that it should not be used under production environments, and only for testing purposes!!*
-
-.. image:: docs/source/tutorial/images/logo.png
 
 `NANO <https://nano.org/>`_ is a cryptocurrency that allows instant and feeless transactions, making it a viable solution for micropayments.
 
 `NanoBlocks` is an **unofficial** Python package built to ease the access to NANO cryptocurrency. It is intended to give an easy interface for programmers to play with the Nano Network, allowing most Nano common operations which includes creating new wallets and accounts, checking accounts information, making transactions and more.
 
-An extensive documentation of the package can be found by `reading the docs <https://readthedocs.org/projects/nanoblocks/>`_.
+An extensive documentation of the package can be found by `reading the docs <https://nanoblocks.readthedocs.io/en/latest/>`_.
  
 Installation
 ------------
@@ -97,7 +98,7 @@ Which allows to access accounts as follows:
     >>> account_0 = wallet.accounts[0]
 
 
-Easy, right? Check all what you can do by `reading the docs <https://readthedocs.org/projects/nanoblocks/>`_!
+Easy, right? Check all what you can do by `reading the docs <https://nanoblocks.readthedocs.io/en/latest/>`_!
 
 LICENSE
 -------

@@ -1,15 +1,10 @@
-.. image:: docs/source/tutorial/images/logo_big.png
-
-NanoBlocks
-==========
+.. image:: https://github.com/ipazc/nanoblocks/raw/main/docs/source/tutorial/images/logo_big.png
 
 .. image:: https://badge.fury.io/py/nanoblocks.svg
     :target: https://badge.fury.io/py/nanoblocks
 
 
-`NANO <https://nano.org/>`_ is a cryptocurrency that allows instant and feeless transactions, making it a viable solution for micropayments.
-
-`NanoBlocks` is an **unofficial** Python package built to ease the access to NANO cryptocurrency. It is intended to give an easy interface for programmers to play with the Nano Network, allowing most Nano common operations which includes creating new wallets and accounts, checking accounts information, making transactions and more.
+`NanoBlocks` is an **unofficial** Python package built to ease the access to `NANO cryptocurrency <https://nano.org/>`_. It is intended to give an easy interface for programmers to play with the Nano Network, allowing most Nano common operations which includes creating new wallets and accounts, checking accounts information, making transactions and more.
 
 An extensive documentation of the package can be found by `reading the docs <https://nanoblocks.readthedocs.io/en/latest/>`_.
  

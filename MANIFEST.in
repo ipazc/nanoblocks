@@ -1,0 +1,2 @@
+include nanoblocks/protocol/crypto/bip39/bip39.txt
+include requirements.txt

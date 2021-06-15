@@ -30,7 +30,8 @@ setup(name='nanoblocks',
           "requests>=2.18.4",
           "qrcode[pil]>=6.1",
           "pandas>=1.1.0",
-          "numpy>=1.18.1"
+          "numpy>=1.18.1",
+          "tzlocal>=2.1",
       ],
       classifiers=[
           'Environment :: Console',

@@ -3,8 +3,9 @@ import requests
 
 from nanoblocks.protocol.messages.node_messages import NodeMessages
 
+from tzlocal import get_localzone
 
-SYSTEM_TIMEZONE = datetime.datetime.now(datetime.timezone.utc).astimezone().tzname()
+SYSTEM_TIMEZONE = str(get_localzone())
 
 
 class NanoNode:

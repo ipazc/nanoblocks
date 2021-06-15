@@ -12,13 +12,13 @@ class NanoWorkServer(WorkServer):
         self._work_server_api = work_server_api
 
     def generate_work_send(self, account: Account, work_difficulty=0xfffffff800000000, multiplier=1.0):
-        return self.ask(WorkServerMessages.WORK_GENERATE(account.frontier, hex(work_difficulty)[2:], str(multiplier)))['work']
+        return self.ask(WorkServerMessages.WORK_GENERATE(account.frontier.hash, hex(work_difficulty)[2:], str(multiplier)))['work']
 
     def generate_work_change(self, account: Account, work_difficulty=0xfffffff800000000, multiplier=1.0):
-        return self.ask(WorkServerMessages.WORK_GENERATE(account.frontier, hex(work_difficulty)[2:], str(multiplier)))['work']
+        return self.ask(WorkServerMessages.WORK_GENERATE(account.frontier.hash, hex(work_difficulty)[2:], str(multiplier)))['work']
 
     def generate_work_receive(self, account: Account, work_difficulty=0xfffffe0000000000, multiplier=1.0):
-        return self.ask(WorkServerMessages.WORK_GENERATE(account.frontier, hex(work_difficulty)[2:], str(multiplier)))['work']
+        return self.ask(WorkServerMessages.WORK_GENERATE(account.frontier.hash, hex(work_difficulty)[2:], str(multiplier)))['work']
 
     def ask(self, message):
         """

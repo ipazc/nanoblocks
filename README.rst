@@ -24,7 +24,7 @@ Getting started
 
 It is required to have a Nano node installed and configured in order to release all the functionalities that this package can give; even though it can still work offline for certain operations (like creating wallets, accounts, and building and signing blocks).
 
-It is highly encouraged to get access to the node RPC and WebSocket servers. A guide for installation of the node can be found [here](https://docs.nano.org/running-a-node/overview/). Furthermore, a [nano-work-server](https://github.com/nanocurrency/nano-work-server) access for work generation is also recommended to enable transactions.
+It is highly encouraged to get access to the node RPC and WebSocket servers. A guide for installation of the node can be found `here <https://docs.nano.org/running-a-node/overview/>`_. Furthermore, a `nano-work-server <https://github.com/nanocurrency/nano-work-server>`_ access for work generation is also recommended to enable transactions.
 
 Everything starts with the `NanoNode` and the `NanoNetwork` classes:
 

@@ -135,6 +135,33 @@ def derive_seed(bip39list):
     return seed
 
 
+def fill_bip39_words(words_list):
+    """
+    Fills missing words in the given word list.
+    If there is any word whose value is None, this method will try to refill it with a random value.
+
+    Note that the last word must be always None since it contains the checksum and must be recomputed for each
+    combination.
+
+    :param words_list:
+        List of words to refill. Any position with value None will be recomputed with a random value. Last word must be
+        always recomputed, so it *MUST* be None.
+    """
+
+    if words_list[-1] is not None:
+        raise KeyError("The word list cannot be filled due to the last word being previously set to a value."
+                       "Try setting the last word to None first.")
+
+    words_list = [w if w is not None else words.sample().iloc[0] for w in words_list[:-1]]
+    last_value = np.random.randint(0, 8)
+
+    seed_binary = "".join(['{0:011b}'.format(v) for v in words_reverse.loc[words_list].tolist()]) + '{0:03b}'.format(
+        last_value)
+    seed_hex = "{0:066x}".format(int(seed_binary, 2)).upper()
+
+    return derive_bip39(seed_hex)
+
+
 def account_privkey(seed, account_index):
     """
     Returns the private key for the specified account index based on the given seed.

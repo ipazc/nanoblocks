@@ -16,9 +16,9 @@ REPRESENTATION_raw = Decimal(1)
 
 REPRESENTATION_LABEL = {
     REPRESENTATION_Gnano: "Gnano",    
-    REPRESENTATION_NANO: "NANO",  # 1 NANO = 1.000.000 nanoblocks
+    REPRESENTATION_NANO: "NANO",  # 1 NANO = 1.000.000 nano
     REPRESENTATION_knano: "knano",    
-    REPRESENTATION_nano: "nanoblocks",
+    REPRESENTATION_nano: "nano",
     REPRESENTATION_mnano: "mnano",
     REPRESENTATION_unano: "unano",
     REPRESENTATION_raw: "raw",

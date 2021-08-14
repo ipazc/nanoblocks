@@ -1,7 +1,7 @@
 from nanoblocks.account.account import Account
 from nanoblocks.node.nanonode import NO_NODE
 from nanoblocks.protocol.crypto.crypto_functions import make_seed, derive_seed, derive_bip39, account_privkey, \
-    account_pubkey, account_address
+    account_pubkey, account_address, fill_bip39_words
 
 
 class Wallets:
@@ -86,6 +86,9 @@ class Wallet:
         """
         Instantiates this class based on a bip39 mnemonic list of keywords.
 
+        This method tolerates missing words in the list (set to None). In case it detects missing words, the method
+        will attempt to refill them with a random word.
+
         :param words_list:
             List of 24 words to use for importing the seed.
 
@@ -99,6 +102,9 @@ class Wallet:
         """
         if len(words_list) != 24:
             raise KeyError("The length of the list should be 24, no more, no less words")
+
+        if any([x is None for x in words_list]):
+            words_list = fill_bip39_words(words_list)
 
         seed = derive_seed(words_list)
 

@@ -149,7 +149,6 @@ class Payment:
                     else:
                         self._account_owner.update()
                         new_balance = self._account_owner.balance
-                        print(new_balance)
                         paid = (new_balance - self._initial_balance) >= self._amount
 
                 if not paid:

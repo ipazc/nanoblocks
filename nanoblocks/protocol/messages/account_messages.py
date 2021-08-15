@@ -1,3 +1,5 @@
+from nanoblocks.currency import Amount
+
 
 class AccountMessages:
     """
@@ -123,6 +125,9 @@ class AccountMessages:
         """
         https://docs.nano.org/commands/rpc-protocol/#accounts_pending
         """
+        if minimum_balance is None:
+            minimum_balance = Amount("1").as_raw().int_str()
+
         message = {
             "action": "accounts_pending",
             "accounts": accounts,
@@ -130,7 +135,7 @@ class AccountMessages:
             "source": "true",
             "sorting": sorting,
             "threshold": minimum_balance,
-            "include_only_confirmed": "true"
+            #"include_only_confirmed": "true"
         }
 
         return message

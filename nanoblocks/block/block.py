@@ -1,10 +1,29 @@
 import datetime
+from time import sleep
 
 import pandas as pd
 
 from nanoblocks.exceptions.block_not_broadcastable_error import BlockNotBroadcastableError
 from nanoblocks.node.nanonode import NO_NODE
 from nanoblocks.protocol.messages import NodeMessages, NetworkMessages
+
+
+# This is the first block in every uncreated account. It doesn't exist in the network.
+_FIRST_BLOCK = {
+    "subtype": "initial",
+    "confirmed": True,
+    "account": "all",
+    "amount": 0,
+    "local_timestamp": "n/A",
+    "height": 0,
+    "link_as_account": None,
+    "block_account": "nano_000000000000000000000000000000000000000000000000000000000000",
+    "block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "contents": {
+        "type": "initial",
+        "link_as_account": None,
+    },
+}
 
 
 class Blocks:
@@ -33,7 +52,16 @@ class Blocks:
         :param block_hash:
             Address of the account. Eg "nano_..."
         """
-        response = self._node_backend.ask(NodeMessages.BLOCK_INFO(block_hash))
+        from nanoblocks.block.block_factory import BlockFactory
+        from nanoblocks.account.account import Account
+
+        if block_hash == _FIRST_BLOCK['block_hash']:
+            response = _FIRST_BLOCK
+            account = None
+
+        else:
+            response = self._node_backend.ask(NodeMessages.BLOCK_INFO(block_hash))
+            account = Account(response['block_account'], node_backend=self._node_backend, initial_update=False)
 
         block_info = {
             'type': response.get('subtype', response.get('contents', {'type': 'Unknown'})['type']),
@@ -46,12 +74,7 @@ class Blocks:
             'hash': block_hash
         }
 
-        from nanoblocks.block.block_factory import BlockFactory
-        from nanoblocks.account.account import Account
-        account = Account(response['block_account'], node_backend=self._node_backend)
-
         block = BlockFactory(self._node_backend, work_server=self._work_server).build_block_object(account, block_info)
-
         return block
 
     def __len__(self):
@@ -116,6 +139,10 @@ class Blocks:
         if self._node_backend.is_online:
             # Node available. Bubble up the update of the account ledger to the node.
             response = self._node_backend.ask(NodeMessages.PROCESS(block.to_dict()))
+
+            if 'error' in response:
+                raise Exception(response['error'])
+
             block_hash = response['hash']
             block_result = self[block_hash]
             account = block.account_owner
@@ -168,6 +195,44 @@ class Block:
         from nanoblocks.account.account import Account
         account = Account(dict_data['account'], node_backend=node_backend, default_work_server=work_server)
         cls(account, dict_data, node_backend=node_backend, work_server=work_server)
+
+    def wait_for_confirmation(self, timeout_seconds=30):
+        """
+        Waits until the block has been confirmed.
+        This method forces a confirmation on the block and waits until it has been solved.
+        """
+        if self._node_backend is None:
+            raise Exception("A node backend is required to confirm the block!")
+
+        if self.confirmed:
+            return True
+
+        # We ask our node to request confirmation for the block
+        self._node_backend.ask(NodeMessages.BLOCK_CONFIRM(self.hash))
+
+        # Now we wait until the block is confirmed
+        start_time = datetime.datetime.now()
+
+        while (datetime.datetime.now() - start_time).total_seconds() < timeout_seconds and not self.confirmed:
+            sleep(2)
+
+        if not self.confirmed:
+            raise Exception("Could not confirm the block in the requested timeout window.")
+
+    @property
+    def confirmed(self):
+        """
+        Checks whether this block has been confirmed or not.
+        This is a sync method that actively ask the node backend.
+        """
+        if self._block_definition.get('confirmed', False) in ['true', True]:
+            return True
+
+        confirmed = self._node_backend.ask(NodeMessages.BLOCK_INFO(self.hash))['confirmed'] == 'true'
+
+        self._block_definition['confirmed'] = confirmed
+
+        return confirmed
 
     @property
     def broadcastable(self):

@@ -45,6 +45,16 @@ class NodeMessages:
         }
 
     @staticmethod
+    def BLOCK_CONFIRM(block_hash):
+        """
+        Source: https://docs.nano.org/commands/rpc-protocol/#block_confirm
+        """
+        return {
+            "action": "block_confirm",
+            "hash": block_hash
+        }
+
+    @staticmethod
     def PROCESS(block_definition, subtype=None):
         """
         https://docs.nano.org/commands/rpc-protocol/#process
@@ -74,7 +84,7 @@ class NodeWebSocketMessages:
         message = {
             "action": 'subscribe',
             "topic": 'confirmation',
-            "ack": True,
+            #"ack": True,
             "options": {
                 "accounts": addresses
             }

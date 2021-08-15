@@ -282,12 +282,10 @@ class Account:
             account_info = {"error": "Account not found"}
 
         if account_info.get("error", None) == 'Account not found':
-            public_key = self.public_key
-
             account_info = {
                 'frontier': "0".zfill(64),
                 'block_count': 0,
-                'representative': public_key,
+                'representative': self.address,
                 'weight': 0,
                 'status': 'virtual',
                 'balance': 0,
@@ -554,15 +552,15 @@ class Account:
         if self._private_key is None:
             raise KeyError("No private key available for this account. Can't send valid blocks.")
 
+        if pending_block.destination_account.address != self.address:
+            raise KeyError("The block target does not belong to this account")
+
         if work_hash is None:
 
             if self._work_server is None:
                 raise WorkError("No work provided for the transaction.")
 
             work_hash = self._work_server.generate_work_receive(self)
-
-        if pending_block.destination_account.address != self.address:
-            raise KeyError("The block target does not belong to this account")
 
         send_block_hash = pending_block.hash
         block_amount = pending_block.amount
@@ -574,7 +572,7 @@ class Account:
 
         return block_state
 
-    def build_change_representative_block(self, new_representative, work_hash):
+    def build_change_representative_block(self, new_representative, work_hash=None):
         """
         Build the state block for changing the representative for this account and returns it.
 

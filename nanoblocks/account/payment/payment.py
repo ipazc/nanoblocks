@@ -36,6 +36,28 @@ async def subscribe_to_account(uri, addresses, payment_init, timeout, desired_am
     return paid, paid_hash
 
 
+async def subscribe_to_account_by_handler(uri, addresses, desired_amount, async_handler_func):
+
+    subscription = NodeWebSocketMessages.CONFIRMATION(addresses)
+
+    async with websockets.connect(uri) as ws:
+        await ws.send(json.dumps(subscription))
+
+        finish = False
+
+        while not finish:
+            result = json.loads(await ws.recv())
+
+            if result.get('topic', None) != "confirmation":
+                continue
+
+            if not desired_amount or Amount(result['message']['amount']) == desired_amount:
+                paid_hash = result['message']['hash']
+                finish = await async_handler_func(paid_hash)
+
+    return True
+
+
 class Payment:
     """
     Gives an easy interface to handle payments for a given account.
@@ -127,6 +149,7 @@ class Payment:
                     else:
                         self._account_owner.update()
                         new_balance = self._account_owner.balance
+                        print(new_balance)
                         paid = (new_balance - self._initial_balance) >= self._amount
 
                 if not paid:
@@ -138,9 +161,21 @@ class Payment:
                 else:
                     self._account_owner.pending_transactions.update()
 
-                last_pending_block = self._account_owner.pending_transactions[0]
+                last_pending_block = self._account_owner.pending_transactions[-1]
 
         else:
-            last_pending_block = self._account_owner.pending_transactions[0]
+            last_pending_block = self._account_owner.pending_transactions[-1]
 
         return last_pending_block
+
+    def async_handler(self, async_handler_func):
+        """
+        Provides an async handler for payments.
+        Requires the WS version of the node.
+        """
+
+        if not self._node_backend.ws_available:
+            raise Exception("WS backend is required for an async handler.")
+
+        asyncio.get_event_loop().run_until_complete(
+            subscribe_to_account_by_handler(self._node_backend.ws, [self._account_owner.address], self._amount, async_handler_func))

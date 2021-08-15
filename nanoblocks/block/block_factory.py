@@ -7,7 +7,8 @@ class BlockFactory:
 
     BLOCK_PROTO_MAP = {
         "receive": BlockReceive,
-        "send": BlockSend
+        "send": BlockSend,
+        "initial": Block
     }
 
     def __init__(self, node_backend, work_server):

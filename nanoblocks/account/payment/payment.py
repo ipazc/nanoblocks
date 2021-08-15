@@ -51,9 +51,11 @@ async def subscribe_to_account_by_handler(uri, addresses, desired_amount, async_
             if result.get('topic', None) != "confirmation":
                 continue
 
-            if not desired_amount or Amount(result['message']['amount']) == desired_amount:
+            if desired_amount is None or Amount(result['message']['amount']) == desired_amount:
                 paid_hash = result['message']['hash']
-                finish = await async_handler_func(paid_hash)
+                paid_source = result['message']['account']
+
+                finish = await async_handler_func(paid_hash, paid_source)
 
     return True
 

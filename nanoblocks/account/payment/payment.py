@@ -28,12 +28,14 @@ async def subscribe_to_account(uri, addresses, payment_init, timeout, desired_am
             if result.get('topic', None) != "confirmation":
                 continue
 
-            if not desired_amount or Amount(result['message']['amount']) == desired_amount:
+            if desired_amount is None or Amount(result['message']['amount']) == desired_amount:
                 # Payment received!
                 paid = True
                 paid_hash = result['message']['hash']
+                paid_source = result['message']['account']
+                paid_amount = Amount(result['message']['amount'])
 
-    return paid, paid_hash
+    return paid, paid_hash, paid_source, paid_amount
 
 
 async def subscribe_to_account_by_handler(uri, addresses, desired_amount, async_handler_func):
@@ -54,8 +56,9 @@ async def subscribe_to_account_by_handler(uri, addresses, desired_amount, async_
             if desired_amount is None or Amount(result['message']['amount']) == desired_amount:
                 paid_hash = result['message']['hash']
                 paid_source = result['message']['account']
+                paid_amount = Amount(result['message']['amount'])
 
-                finish = await async_handler_func(paid_hash, paid_source)
+                finish = await async_handler_func(paid_hash, paid_source, paid_amount)
 
     return True
 
@@ -88,7 +91,12 @@ class Payment:
         """
         Generates the payment URI
         """
-        return f"nano:{self._account_owner.address}?amount={(self._amount.as_raw().int_str())}"
+        uri = f"nano:{self._account_owner.address}"
+
+        if self._amount is not None:
+            uri += f"?amount={(self._amount.as_raw().int_str())}"
+
+        return uri
 
     @property
     def qr_code(self):
@@ -97,7 +105,7 @@ class Payment:
         """
         return qrcode.make(self.uri)
 
-    def wait(self, timeout=30, peek_interval=5, match_exact_quantity=True):
+    def wait(self, timeout=30, peek_interval=5):
         """
         Waits for the payment to be done.
 
@@ -112,15 +120,16 @@ class Payment:
         :param timeout:
             Time in seconds to wait for the payment. Set it to 0 to wait indefinitely.
 
-        :param peek_seconds:
+        :param peek_interval:
             Peek interval when no websocket is available.
-
-        :param match_exact_quantity:
-            Boolean flag to force wait until the payment matches the expected quantity
 
         :return:
             Returns the block that needs to be confirmed.
         """
+        amount = self._amount
+
+        if amount is None:
+            amount = Amount("1")
 
         self._account_owner.update()
 
@@ -132,7 +141,9 @@ class Payment:
             if self._node_backend.ws_available:
                 try:
 
-                    paid, paid_hash = asyncio.get_event_loop().run_until_complete(subscribe_to_account(self._node_backend.ws, [self._account_owner.address], payment_init, timeout, self._amount))
+                    paid, paid_hash, paid_source, paid_amount = asyncio.get_event_loop().run_until_complete(subscribe_to_account(self._node_backend.ws,
+                                                                                                       [self._account_owner.address],
+                                                                                                       payment_init, timeout, self._amount))
 
                 except concurrent.futures._base.TimeoutError:
                     raise PaymentTimeoutError(f"Payment timeout ({timeout} seconds)") from None
@@ -146,19 +157,19 @@ class Payment:
 
                     if self._account_owner.is_virtual:
                         # If it is virtual (a new account) we need to check the pending blocks instead
-                        pending_transactions = self._account_owner.pending_transactions.update(minimum_quantity=self._amount, count=100)
+                        pending_transactions = self._account_owner.pending_transactions.update(minimum_quantity=amount, count=100)
                         paid = len(self._account_owner.pending_transactions) > 0
                     else:
                         self._account_owner.update()
                         new_balance = self._account_owner.balance
-                        paid = (new_balance - self._initial_balance) >= self._amount
+                        paid = (new_balance - self._initial_balance) >= amount
 
                 if not paid:
                     raise PaymentTimeoutError(f"Payment timeout ({timeout} seconds)") from None
 
                 # We search the last pending block with this quantity
-                if match_exact_quantity:
-                    self._account_owner.pending_transactions.update(minimum_quantity=self._amount)
+                if self._amount is not None:
+                    self._account_owner.pending_transactions.update(minimum_quantity=amount)
                 else:
                     self._account_owner.pending_transactions.update()
 
@@ -179,4 +190,5 @@ class Payment:
             raise Exception("WS backend is required for an async handler.")
 
         asyncio.get_event_loop().run_until_complete(
-            subscribe_to_account_by_handler(self._node_backend.ws, [self._account_owner.address], self._amount, async_handler_func))
+            subscribe_to_account_by_handler(self._node_backend.ws, [self._account_owner.address], self._amount,
+                                            async_handler_func))

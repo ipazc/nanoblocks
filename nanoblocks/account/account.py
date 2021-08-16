@@ -398,15 +398,16 @@ class Account:
         """
         return self._account_info['block_count']
 
-    def request_payment(self, nano_units_amount):
+    def request_payment(self, nano_units_amount=None):
         """
         Generates the payment object which contains payment handle for the given amount
 
         :param nano_units_amount:
-            Amount of NANO.
+            Amount of NANO to hook payment for.
             If a different unit measure is required, wrap it into an `Amount()` class.
+            If no amount is required, set it to None.
         """
-        if type(nano_units_amount) is not Amount:
+        if nano_units_amount is not None and type(nano_units_amount) is not Amount:
             nano_units_amount = Amount.from_NANO(str(nano_units_amount))
 
         payment = Payment(self, nano_units_amount, node_backend=self._node_backend, work_server=self._work_server)

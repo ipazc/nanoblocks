@@ -1,18 +1,18 @@
-What is NanoBlocks
+What is nanoblocks
 ==================
 
-`NanoBlocks` is an **unofficial** Python package built to ease the access to `NANO cryptocurrency <https://nano.org/>`_. It is intended to give an easy interface for programmers to play with the Nano Network, allowing most Nano common operations which includes creating new wallets and accounts, checking accounts information, making transactions and more.
+`nanoblocks` is an **unofficial** Python package built to ease the access to `NANO cryptocurrency <https://nano.org/>`_. It is intended to give an easy interface for programmers to play with the Nano Network, allowing most Nano common operations which includes creating new wallets and accounts, checking accounts information, making transactions and more.
 
-In the following sections, you will learn how `NanoBlocks` is built and what are the basic concepts required to deal with the package.
+In the following sections, you will learn how `nanoblocks` is built and what are the basic concepts required to deal with the package.
 
 Basic concepts
 --------------
 
-`NanoBlocks` is a composition of a few main concepts as shown in the following schema:
+`nanoblocks` is a composition of a few main concepts as shown in the following schema:
 
-.. image:: /tutorial/images/NanoBlocks_schema.png
+.. image:: /tutorial/images/nanoblocks_schema.png
 
-This schema is implemented as-is in NanoBlocks, meaning that there exist the corresponding classes :class:`NanoNode <nanoblocks.node.NanoNode>`, :class:`NanoNetwork <nanoblocks.network.NanoNetwork>`, `Blocks <../nanoblocks.block.html>`_, :class:`Account <nanoblocks.account.Account>` and :class:`Wallet <nanoblocks.wallet.Wallet>`.
+This schema is implemented as-is in nanoblocks, meaning that there exist the corresponding classes :class:`NanoNode <nanoblocks.node.NanoNode>`, :class:`NanoNetwork <nanoblocks.network.NanoNetwork>`, `Blocks <../nanoblocks.block.html>`_, :class:`Account <nanoblocks.account.Account>` and :class:`Wallet <nanoblocks.wallet.Wallet>`.
 These 5 classes are interrelated to each other as shown by the arrows present in the schema image, which makes it extremely easy to flow.
 
  * :class:`NanoNode <nanoblocks.node.NanoNode>` Is a class that contains the addresses of the RPC HTTP, WebSocket and RemoteWorkServer (if available). It also wraps simple communication mechanism for each. All the objects in the package usually have access to this object.

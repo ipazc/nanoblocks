@@ -5,14 +5,14 @@
     :target: https://badge.fury.io/py/nanoblocks
 
 
-`NanoBlocks` is an **unofficial** Python package built to ease the access to `NANO cryptocurrency <https://nano.org/>`_. It is intended to give an easy interface for programmers to play with the Nano Network, allowing most Nano common operations which includes creating new wallets and accounts, checking accounts information, making transactions and more.
+`nanoblocks` is an **unofficial** Python package built to ease the access to `NANO cryptocurrency <https://nano.org/>`_. It is intended to give an easy interface for programmers to play with the Nano Network, allowing most Nano common operations which includes creating new wallets and accounts, checking accounts information, making transactions and more.
 
 An extensive documentation of the package can be found by `reading the docs <https://nanoblocks.readthedocs.io/en/latest/>`_.
  
 Installation
 ------------
 
-`NanoBlocks` can be installed through pip:
+`nanoblocks` can be installed through pip:
 
 
 .. code-block:: bash
@@ -22,26 +22,21 @@ Installation
 Getting started
 ---------------
 
-It is required to have a Nano node installed and configured in order to release all the functionalities that this package can give; even though it can still work offline for certain operations (like creating wallets, accounts, and building and signing blocks).
-
-It is highly encouraged to get access to the node RPC and WebSocket servers. A guide for installation of the node can be found `here <https://docs.nano.org/running-a-node/overview/>`_. Furthermore, a `nano-work-server <https://github.com/nanocurrency/nano-work-server>`_ access for work generation is also recommended to enable transactions.
-
-Everything starts with the `NanoNode` and the `NanoNetwork` classes:
+Accessing the Nano network can be done as follows:
 
 .. code-block:: python
 
-    >>> from nanoblocks.node import NanoNode
     >>> from nanoblocks.network import NanoNetwork
 
-    >> node = NanoNode("http://localhost:7076", "ws://localhost:7078")
-    >> node
-    [Node http://localhost:7076 (Nano V21.2)]
-
-    >> network = NanoNetwork(node)
+    >> network = NanoNetwork()
     >> network
-    [Node http://localhost:7076 (Nano V21.2)] (270 peers; 15362838 account)
+    [Node https://mynano.ninja/api/node (Nano V22.1)] (262 peers; 26300103 account)
 
-Having a `NanoNetwork` class instance, accounts in the network can be accessed as easy as follows:
+By default, a public nano RPC server is used (mynano.ninja) as the backend, which allows the package to be ran out-of-the-box.
+Even though a list of available public nodes can be found at `https://publicnodes.somenano.com/ <https://publicnodes.somenano.com/>`_, it is highly encouraged to run your own Nano node.
+
+
+Having a `NanoNetwork` class instance, accounts in the network can be accessed as follows:
 
 .. code-block:: python
 
@@ -54,7 +49,8 @@ Having a `NanoNetwork` class instance, accounts in the network can be accessed a
         Pending balance: 0.000002000000000000000000000002 NANO
         Last confirmed payment: 2020-12-02 01:30:39+01:00
         Is virtual: False
-
+        Last update: 2021-11-17T01:30:04.348637+01:00 (0.02 seconds ago)
+    )
 
 Blocks can be accessed as follows:
 
@@ -74,6 +70,9 @@ And wallets can be accessed as follows:
 
 .. code-block:: python
 
+    # To create a new wallet
+    >>> wallet = network.wallets.create()
+
     # To access an existing wallet by using the 64-Bytes seed:
     >>> wallet = network.wallets["7F632A80ECCC54A058602CD64A81D23A6B4D7320562E4767C9EB0BBB1151CDF2"]
 
@@ -87,15 +86,23 @@ And wallets can be accessed as follows:
     >>> print(wallet.mnemonic)
     ['legal', 'bone', 'parent', 'sunset', 'shed', 'expand', 'ghost', 'airport', 'stone', 'favorite', 'innocent', 'inquiry', 'regular', 'ridge', 'life', 'shift', 'electric', 'dinner', 'kiss', 'blast', 'rain', 'pottery', 'daughter', 'execute']
 
-Which allows to access accounts as follows:
-
+Controlling a wallet seed allows to access accounts deterministically:
 
 .. code-block:: python
 
     >>> account_0 = wallet.accounts[0]
+    >>> account_1 = wallet.accounts[1]
 
 
-Easy, right? Check all what you can do by `reading the docs <https://nanoblocks.readthedocs.io/en/latest/>`_!
+And transacting Nano can be done as follows:
+
+.. code-block:: python
+
+    >>> account_0.send_nano(account_1, "0.0001")
+    >>> account_1.receive_nano()  # Receives the last pending transaction. Can be repeated until no pending transactions remain.
+
+
+Easy, right? Check what you can do by `reading the docs <https://nanoblocks.readthedocs.io/en/latest/>`_!
 
 LICENSE
 -------

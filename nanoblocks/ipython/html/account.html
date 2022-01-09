@@ -1,0 +1,31 @@
+<div style="background: #c6e4f7; width:100%;margin:5px; color: #000000; border: 1px solid black; border-radius: 10px; cursor: text;">
+    <div style="text-align: center;border-bottom:1px solid black; padding:5px; background: #6677bd; color: #ffffff; border-top-left-radius: 10px; border-top-right-radius: 10px;">
+        <div>{is_virtual}{account_address} <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{account_address}');">{copy_to_clipboard_image}</button></div>
+    </div>
+    <div style="display: flex; flex-direction: column;">
+        <div style="display: flex; flex-direction: row; width: 100%; ">
+            <div style="width: 30%;">
+                <div style="padding:5px; text-align:center; cursor:default;">
+                    <img title="{account_address}" style="width: 100px; height:100px; border: 3px solid #475547;" src="data:image/jpeg;base64,{account_qrcode}">
+                </div>
+
+            </div>
+
+            <div style="display: flex; flex-direction: column; width: 70%; border-left: 1px solid black;">
+                <div style="padding:5px; text-align: center; border-bottom: 1px solid black;">Total blocks: {total_blocks} </div>
+                <div title="Total balance" style="text-align: center; border-bottom: 1px dashed black; padding: 5px;"><button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; margin-top:2px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{total_balance_str}');">{total_balance_image}</button> {total_balance}</div>
+                <div style="display: flex; flex-direction: row;">
+                    <div title="Confirmed balance" style="text-align: center; width:50%; padding: 5px;"><button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; margin-top:2px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{confirmed_balance_str}');">{confirmed_balance_image}</button> {confirmed_balance}</div>
+                    <div title="Pending balance" style="text-align: center; width:50%; padding: 5px;"><button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; margin-top:2px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{pending_balance_str}');">{pending_balance_image}</button> {pending_balance}</div>
+                </div>
+                <div title="Representative account" style="text-align: center; border-top: 1px solid black; padding: 5px;">Representative: {representative_address} <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{representative_address}');">{copy_to_clipboard_image}</button></div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: row; width: 100%; border-top: 1px solid black; font-size: 0.7em;">
+            <div title="This is the last time a transaction took place in this account." style="width: 40%; padding: 5px;">Last transaction date: {last_transaction_date}</div>
+            <div title="This is the last time the account object was updated. Use account.update() to force an update." style="width: 40%; text-align:right; padding: 5px;">Last update: {last_update}</div>
+            <div style="width: 20%; padding: 5px;">({last_update_seconds_elapsed} seconds ago)</div>
+        </div>
+    </div>
+</div>

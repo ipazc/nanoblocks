@@ -1,4 +1,3 @@
-import datetime
 import requests
 
 from nanoblocks.protocol.messages.node_messages import NodeMessages
@@ -75,7 +74,15 @@ class NanoNode:
         if not self.is_online:
             return None
 
-        return requests.post(self.rest, json=message).json()
+        response = requests.post(self.rest, json=message).json()
+        return response
 
 
 NO_NODE = NanoNode(None, None)
+
+# SOURCE: https://publicnodes.somenano.com/
+RAINSTORM_NODE = NanoNode(rest_api_url='https://rainstorm.city/api', websocket_api_url='wss://rainstorm.city/websocket')
+NINJA_NODE = NanoNode(rest_api_url='https://mynano.ninja/api/node', websocket_api_url='wss://ws.mynano.ninja/')
+NANOS_NODE = NanoNode(rest_api_url='https://proxy.nanos.cc/proxy', websocket_api_url='wss://socket.nanos.cc/')
+SOMENANO_NODE = NanoNode(rest_api_url='https://node.somenano.com/proxy', websocket_api_url='wss://node.somenano.com/websocket')
+POWERAPI_NODE = NanoNode(rest_api_url='https://proxy.powernode.cc/proxy', websocket_api_url='wss://ws.powernode.cc/')

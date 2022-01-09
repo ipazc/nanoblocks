@@ -8,7 +8,7 @@ Check the following section to know how to install a node.
 Set-up a Node
 -------------
 
-`NanoBlocks` can release all its functionality by accessing a Node API. You can either get access to a public Node http REST API and WebSockets, or mount your own node instead (which is highly encouraged).
+`nanoblocks` can release all its functionality by accessing a Node API. You can either get access to a public Node http REST API and WebSockets, or mount your own node instead (which is highly encouraged).
 If you want to install the Nano node, you should try to set up a Node `by following the official installation guide <https://docs.nano.org/running-a-node/overview/>`_.
 
 Take note of the rest API address *(usually TCP node_host:7076)* and the WebSocket address *(usually TCP node_host:7078)*, as you are going to need them from now on.
@@ -61,7 +61,7 @@ Given the `network` object, accessing an account can be done as follows:
 
 
 You might have noticed well: `network.accounts[]` behaves like a python dictionary, which in turns makes it easy to access any account in the network.
-In `NanoBlocks`, every account is wrapped inside the class :class:`Account <nanoblocks.account.Account>` which gives basic functionality for account handling:
+In `nanoblocks`, every account is wrapped inside the class :class:`Account <nanoblocks.account.Account>` which gives basic functionality for account handling:
 
 .. code-block:: python
 
@@ -155,7 +155,7 @@ Note that this method does not require to have a node attached. This means that 
     >>> network = NanoNetwork()  # No node attached
     >>> wallet = network.wallets.create()
 
-This happens because `NanoBlocks` integrates all the cryptographic functions required to create wallets and accounts.
+This happens because `nanoblocks` integrates all the cryptographic functions required to create wallets and accounts.
 
 Creating wallet accounts
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -167,7 +167,7 @@ Every account in a wallet is deterministically indexed by an integer in the rang
     >>> account_0 = wallet.accounts[0]
     >>> account_1 = wallet.accounts[1]
 
-The account at every index is always the same account, no matter which software wallet you use. This means that the wallet at a given index is the same in NanoBlocks, in Natrium, Nault or any other wallet software.
+The account at every index is always the same account, no matter which software wallet you use. This means that the wallet at a given index is the same in nanoblocks, in Natrium, Nault or any other wallet software.
 Note that this process can still be done offline, as it is not required nodes to create accounts.
 
 When an account is new and doesn't have blockchain, it is considered `virtual`. A virtual account becomes real in the
@@ -190,7 +190,7 @@ Furthermore, if you have the private key, you can unlock it at any time directly
 Requesting payments
 -------------------
 
-With `NanoBlocks`, requesting a payment for an account can be simplified in two lines of code.
+With `nanoblocks`, requesting a payment for an account can be simplified in two lines of code.
 Any `Account` in the network can be used to request a payment through its method `request_payment()`.
 When invoked, a Nano amount is passed as parameter and a :class:`Payment <nanoblocks.account.payment.Payment>` object is returned, which gives an easy interface to the payment process.
 

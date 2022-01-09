@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'NanoBlocks'
+project = 'nanoblocks'
 copyright = '2021, Iván de Paz Centeno'
 author = 'Iván de Paz Centeno'
 

@@ -1,2 +1,13 @@
 include nanoblocks/protocol/crypto/bip39/bip39.txt
+include nanoblocks/ipython/html/account.html
+include nanoblocks/ipython/html/block_change.html
+include nanoblocks/ipython/html/block_receive.html
+include nanoblocks/ipython/html/block_send.html
+include nanoblocks/ipython/img/clipboard-svgrepo-com.svg
+include nanoblocks/ipython/img/inbox-svgrepo-com.svg
+include nanoblocks/ipython/img/outbox-svgrepo-com.svg
+include nanoblocks/ipython/img/dry-svgrepo-com.svg
+include nanoblocks/ipython/img/confirmed-svgrepo-com.svg
+include nanoblocks/ipython/img/shifts-pending-svgrepo-com.svg
+include nanoblocks/ipython/img/ok-svgrepo-com.svg
 include requirements.txt

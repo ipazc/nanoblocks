@@ -1,110 +1,28 @@
-import pandas as pd
+import base64
+import sys
+from io import BytesIO
 
-from datetime import datetime
+import pandas as pd
+import numpy as np
+import qrcode
+
+from nanoblocks import rcParams
+from nanoblocks.account.account_history import AccountHistory
+from nanoblocks.account.account_pending_history import AccountPendingHistory
+from nanoblocks.base import NanoblocksClass
 
 from nanoblocks.account.payment.payment import Payment
-from nanoblocks.block.block_factory import BlockFactory
-from nanoblocks.block.block_state import BlockState
 from nanoblocks.currency import Amount
 from nanoblocks.exceptions.block_not_broadcastable_error import BlockNotBroadcastableError
 from nanoblocks.exceptions.insufficient_funds import InsufficientFunds
-from nanoblocks.exceptions.node_backend_required_error import NodeBackendRequiredError
 from nanoblocks.exceptions.work_error import WorkError
-from nanoblocks.node.nanonode import NO_NODE
+from nanoblocks.ipython.html import get_html
+from nanoblocks.ipython.img import get_svg
 from nanoblocks.protocol.crypto import address_pubkey, account_pubkey, account_address, hash_block, sign_block
-from nanoblocks.protocol.messages import NetworkMessages
-from nanoblocks.protocol.messages.account_messages import AccountMessages
+from nanoblocks.utils.time import now
 
 
-class Accounts:
-    """
-    Handles the account interaction through the node API
-    """
-
-    def __init__(self, node_backend=NO_NODE, work_server=None):
-        """
-        Constructor of the class
-
-        :param node_backend:
-            A Node object pointing to a working Nano node.
-            Note that this class may work off-line, which allows the retrieval of public keys.
-
-        :param work_server:
-            Work server object to process work automatically. Optional.
-        """
-        self._node_backend = node_backend
-        self._work_server = work_server
-
-    def __getitem__(self, nano_account_address):
-        """
-        Retrieves nanoblocks accounts from the network, given the nanoblocks address.
-
-        It may be provided a single string of the nanoblocks account or a list of many nanoblocks accounts. If a list is provided,
-        the result information of the accounts might be stripped to the minimal supported by bulk operations in the
-        backend. For instance, the last modification and the representative properties are not retrieved.
-
-        :param nano_account_address:
-            Address of the account. Eg "nano_..."
-                or
-            A list of addresses. Eg ["nano_account1", "nano_account2", ...]
-        """
-        if type(nano_account_address) is list:
-            # Bulk retrieval of accounts. We take minimum information for each account
-            accounts = {address: Account(address, node_backend=self._node_backend,
-                                         default_work_server=self._work_server,
-                                         initial_update=False) for address in nano_account_address}
-
-            if self._node_backend.is_online:
-                balances = self._node_backend.ask(AccountMessages.ACCOUNTS_BALANCES(nano_account_address))['balances']
-                frontiers = self._node_backend.ask(AccountMessages.ACCOUNTS_FRONTIERS(nano_account_address))['frontiers']
-
-                for nano_address in nano_account_address:
-                    nano_account = accounts[nano_address]
-                    nano_balances = balances[nano_address]
-                    nano_frontier = frontiers[nano_address]
-
-                    nano_account.offline_update({
-                        'balance': nano_balances['balance'],
-                        'pending': nano_balances['pending'],
-                        'frontier': nano_frontier,
-                        'block_count': 'unknown',
-                        'modified_timestamp': 0
-                    })
-
-            result = accounts
-        else:
-            result = Account(nano_account_address, node_backend=self._node_backend,
-                             default_work_server=self._work_server)
-
-        return result
-
-    def __len__(self):
-        """
-        Returns the number of accounts registered in the network, in case the backend is available.
-        """
-        response = self._node_backend.ask(NetworkMessages.TELEMETRY())
-
-        if not response:
-            response = {'account_count': 0}
-
-        return int(response['account_count'])
-
-    def __str__(self):
-        return f"{str(self._node_backend)} Total accounts: {len(self)}"
-
-    def from_private_key(self, account_privatekey):
-        """
-        Retrieves a nanoblocks account given the private key.
-        Note that this account is fully controllable, since it can sign transactions.
-
-        :param account_privatekey:
-            Private key of the account (string of 64 values in hexadecimal)
-        """
-        return Account.from_priv_key(account_privatekey, node_backend=self._node_backend,
-                                     default_work_server=self._work_server)
-
-
-class Account:
+class Account(NanoblocksClass):
     """
     Handles a single account in the Nano network.
 
@@ -116,46 +34,51 @@ class Account:
     :param nano_address:
         Nano address of the account. E.g "nano_3pyz..".
 
-    :param node_backend:
-        A Node object pointing to a working Nano node.
-        Note that this class may work off-line, which allows the retrieval of public keys.
+    :param nano_network:
+        The nano network owning this account.
 
     :param initial_update:
-        Flag to determine if the account should be updated at start or not.
-
-    :param default_work_server:
-        The default work_server to use in case no work is provided.
+        Flag to determine if the account should be updated at start or not. Updating an account requires querying the
+        backend node.
     """
 
-    def __init__(self, nano_address, node_backend=NO_NODE, initial_update=True, default_work_server=None):
+    def __init__(self, nano_address, nano_network, initial_update=True):
         """
 
         :param nano_address:
             Nano address of the account. E.g "nano_3pyz...".
 
-        :param node_backend:
-            A Node object pointing to a working Nano node.
-            Note that this class may work off-line, which allows the retrieval of public keys.
+        :param nano_network:
+            The nano network owning this account.
 
         :param initial_update:
             Flag to determine if the account should be updated at start or not.
 
-        :param default_work_server:
-            The default work_server to use in case no work is provided.
         """
 
+        super().__init__(nano_network)
+
         self._nano_address = nano_address
-        self._node_backend = node_backend
         self._public_key = address_pubkey(nano_address)  # If the address is not valid -> Exception raised here
         self._private_key = None
-        self._account_info = {}
-        self._work_server = default_work_server
-        self._pending_transactions_history = AccountPendingHistory(self, self._node_backend,
-                                                                   work_server=self._work_server)
-        self.update(initial_update)
+        self._account_info = {
+            'frontier': "0".zfill(64),
+            'block_count': 0,
+            'representative': self.address,
+            'weight': 0,
+            'status': 'Update required',
+            'balance': 0,
+            'pending': 0,
+            'modified_timestamp': now(self.network.node_backend.timezone).timestamp()
+        }
+        self._pending_transactions_history = AccountPendingHistory(self, nano_network=nano_network)
+        self._last_update = None
+
+        if initial_update:
+            self.update()
 
     @classmethod
-    def from_priv_key(cls, private_key, node_backend=NO_NODE, default_work_server=None):
+    def from_priv_key(cls, private_key, nano_network):
         """
         Tries to access an account from the specified private key.
 
@@ -164,20 +87,17 @@ class Account:
         :param private_key:
             private key to derive the account from.
 
-        :param node_backend:
-            A Node object pointing to a working Nano node.
-            Note that this class may work off-line, which allows the retrieval of public keys.
+        :param nano_network:
+            The nano network owning this account.
 
-        :param default_work_server:
-            Default work server object to generate work automatically. Optional.
         """
         public_key = account_pubkey(private_key)
-        account = cls.from_pub_key(public_key, node_backend=node_backend, default_work_server=default_work_server)
+        account = cls.from_pub_key(public_key, nano_network=nano_network)
         account._private_key = private_key
         return account
 
     @classmethod
-    def from_pub_key(cls, pub_key, node_backend=NO_NODE, default_work_server=None):
+    def from_pub_key(cls, pub_key, nano_network):
         """
         Gives access to the specified account by its public key.
 
@@ -186,15 +106,11 @@ class Account:
         :param pub_key:
             Public key for the nanoblocks account.
 
-        :param node_backend:
-            A Node object pointing to a working Nano node.
-            Note that this class may work off-line, which allows the retrieval of public keys/addresses.
-
-        :param default_work_server:
-            Default work server object to generate work automatically. Optional.
+        :param nano_network:
+            The nano network owning this account.
         """
         nano_address = account_address(pub_key)
-        account = cls(nano_address, node_backend=node_backend, default_work_server=default_work_server)
+        account = cls(nano_address, nano_network=nano_network)
         return account
 
     @property
@@ -250,36 +166,50 @@ class Account:
         Provides the frontier block hash for this account.
         In case of a new account, this frontier is 0.
         """
+        frontier_hash = self._account_info.get('frontier')
 
-        if self._node_backend.is_online:
-            from nanoblocks.block import Blocks
-            blocks = Blocks(node_backend=self._node_backend, work_server=self._work_server)
-            frontier_block = blocks[self._account_info['frontier']]
+        if frontier_hash is None:
+            return 0
 
-        else:
-            from nanoblocks.block import Block
-            frontier_block = Block(self, {'type': 'Unknown', 'balance': 'Unknown', 'hash': self._account_info['frontier']}, node_backend=self._node_backend,
-                                   work_server=self._work_server)
+        try:
+            frontier_block = self.blocks[frontier_hash]
+
+            if frontier_block.is_first:
+                frontier_block._account_owner = self
+
+        except KeyError:
+            factory = self.blocks.factory
+            factory.build()
+            frontier_block = self.blocks.new_block(hash_block=frontier_hash)
 
         return frontier_block
 
     @property
-    def info(self):
+    def qr_code(self):
+        """
+        Generates a QR code representation of this account in PIL format.
+
+        If a payment is desired, use the .request_payment(...).qr_code method instead.
+
+        :return:
+            QR code representation of the account
+        """
+        uri = f"nano:{self.address}"
+        return qrcode.make(uri)
+
+    def to_dict(self):
         """
         Retrieves the cached account information.
-        Note: a call to `update()` before `account_info()` is highly encouraged!!
+        Note: a call to `update()` before `info()` is highly encouraged!!
         """
         return dict(self._account_info)
 
-    def update(self, query_node=True):
+    def update(self):
         """
         Retrieves the account information from the node (if available) and caches it inside the object.
         """
-        if self._node_backend.is_online and query_node:
-            account_info = self._node_backend.ask(AccountMessages.ACCOUNT_INFO(self._nano_address, representative=True,
-                                                                               weight=True, pending=True))
-        else:
-            account_info = {"error": "Account not found"}
+        account_info = self.node_backend.account_info(self._nano_address, representative=True, weight=True,
+                                                      pending=True)
 
         if account_info.get("error", None) == 'Account not found':
             account_info = {
@@ -290,22 +220,29 @@ class Account:
                 'status': 'virtual',
                 'balance': 0,
                 'pending': 0,
-                'modified_timestamp': datetime.now().timestamp()
+                'modified_timestamp': now(self.node_backend.timezone).timestamp()
             }
 
+            # We try to get if are there pending blocks for this account.
+            # This could happen if it is a new account in the ledger.
+            if len(self.pending_transactions) > 0:
+                account_info['pending'] = self.pending_transactions[-1].amount
+
         self._account_info = account_info
+        self._last_update = now(self.node_backend.timezone)
 
     def offline_update(self, account_info):
         """
         Performs an offline update with the given account_info.
         This method does not interact with a node and can be executed offline to update the information of an account
-        object given (for example, taking this info from a local json file).
+        object (for example, taking this info from a local json file).
 
         :param account_info:
             Dictionary containing information of the account (frontier, block_count, representative, weight, status,
             balance, pending, modified_timestamp, ...).
         """
         self._account_info.update(account_info)
+        self._last_update = now(self.node_backend.timezone)
 
     def offline_update_by_block(self, block_state):
         """
@@ -329,13 +266,18 @@ class Account:
         # 2. Representative of the account
         self._account_info['representative'] = block_state.representative
 
-        # 3. Confirmed balance of the account
-        pending_balance_consumed = min(self.confirmed_balance - block_state.balance, 0)
-        self._account_info['balance'] = block_state.balance.as_raw().int_str()
-        self._account_info['pending'] = (self.pending_balance + pending_balance_consumed).as_raw().int_str()
+        # In a reception, the balance of the block is higher than the confirmed balance. We recompute manually the
+        # pending balance.
+        if block_state.balance >= self.confirmed_balance:
+            self._account_info['pending'] = self.balance - block_state.balance
+
+        # 3. Now we update the confirmed balance of the account
+        self._account_info['balance'] = int(str(block_state.balance))
 
         if self._account_info['block_count'] != "Unknown":
             self._account_info['block_count'] = int(self._account_info['block_count']) + 1
+
+        self._last_update = now(self.node_backend.timezone)
 
     @property
     def confirmed_balance(self):
@@ -344,7 +286,7 @@ class Account:
 
         Note: a call to `update()` or `offline_update()` before `confirmed_balance` is highly encouraged!!
         """
-        return Amount(self._account_info['balance'])
+        return Amount(self._account_info['balance'], unit="raw")
 
     @property
     def pending_balance(self):
@@ -353,7 +295,7 @@ class Account:
 
         Note: a call to `update()` or `offline_update()` before `pending_balance` is highly encouraged!!
         """
-        return Amount(self._account_info['pending'])
+        return Amount(self._account_info['pending'], unit="raw")
 
     @property
     def pending_transactions(self):
@@ -361,8 +303,7 @@ class Account:
         Retrieves the pending transactions for the account.
         """
         # if node is online, we refresh the transactions list
-        if self._node_backend.is_online:
-            self._pending_transactions_history.update()
+        self._pending_transactions_history.update()
 
         return self._pending_transactions_history
 
@@ -385,7 +326,7 @@ class Account:
         """
         m_datetime = pd.to_datetime(
             pd.Timestamp(int(self._account_info['modified_timestamp']) * 1000000000).to_pydatetime()).tz_localize(
-            "UTC").tz_convert(self._node_backend.timezone)
+            "UTC").tz_convert(self.node_backend.timezone)
 
         return m_datetime
 
@@ -407,10 +348,10 @@ class Account:
             If a different unit measure is required, wrap it into an `Amount()` class.
             If no amount is required, set it to None.
         """
-        if nano_units_amount is not None and type(nano_units_amount) is not Amount:
-            nano_units_amount = Amount.from_NANO(str(nano_units_amount))
+        if nano_units_amount is not None:
+            nano_units_amount = Amount(nano_units_amount)
 
-        payment = Payment(self, nano_units_amount, node_backend=self._node_backend, work_server=self._work_server)
+        payment = Payment(self, nano_units_amount, nano_network=self.network)
         return payment
 
     @property
@@ -425,14 +366,59 @@ class Account:
     def __repr__(self):
         return str(self)
 
+    def _repr_html_(self):
+        template_html = get_html("account")
+
+        date_format = rcParams["display.date_format"]
+
+        with BytesIO() as b:
+            self.qr_code.save(b, format="JPEG")
+            img_str = str(base64.b64encode(b.getvalue()), "UTF-8")
+
+        representation_formatted = template_html.format(**{
+            'is_virtual': ("[VIRTUAL] " if self.is_virtual else ""),
+            'account_address': self.address,
+            'total_blocks': self.block_count,
+            'total_balance': self.balance.as_unit("NANO").format(),
+            'total_balance_str': self.balance.as_unit("NANO"),
+            'confirmed_balance': self.confirmed_balance.as_unit("NANO").format(),
+            'confirmed_balance_str': self.confirmed_balance.as_unit("NANO"),
+            'pending_balance': self.pending_balance.as_unit("NANO").format(),
+            'pending_balance_str': self.pending_balance.as_unit("NANO"),
+            'last_transaction_date': self.modified_date.strftime(date_format),
+            'last_update': self.last_update.strftime(date_format),
+            'last_update_seconds_elapsed': self.last_update_elapsed_seconds,
+            'copy_to_clipboard_image': get_svg('clipboard'),
+            'total_balance_image': get_svg('total_balance'),
+            'confirmed_balance_image': get_svg('confirmed_balance'),
+            'pending_balance_image': get_svg('pending_balance'),
+            'representative_address': self.representative.address,
+            'account_qrcode': img_str
+        })
+
+        return representation_formatted
+
     def __str__(self):
         return f"{self.address} (\n\t" \
                f"Total blocks: {self.block_count}\n\t" \
-               f"Total balance: {str(self.balance)}\n\t" \
-               f"Confirmed balance: {str(self.confirmed_balance)}\n\t" \
-               f"Pending balance: {str(self.pending_balance)}\n\t" \
+               f"Total balance: {self.balance.as_unit(rcParams['currency.unit']).format()}\n\t" \
+               f"Confirmed balance: {self.confirmed_balance.as_unit(rcParams['currency.unit']).format()}\n\t" \
+               f"Pending balance: {self.pending_balance.as_unit(rcParams['currency.unit']).format()}\n\t" \
                f"Last confirmed payment: {self.modified_date}\n\t" \
-               f"Is virtual: {self.is_virtual}\n)"
+               f"Is virtual: {self.is_virtual}\n\t" \
+               f"Last update: {self._last_update.isoformat()} ({self.last_update_elapsed_seconds} seconds ago)\n)"
+
+    @property
+    def last_update_elapsed_seconds(self):
+        return np.round((now(self.node_backend.timezone) - self._last_update).total_seconds(), 2)
+
+    @property
+    def last_update(self):
+        """
+        :return:
+        Datetime of the last update of this account.
+        """
+        return self._last_update
 
     @property
     def representative(self):
@@ -441,8 +427,8 @@ class Account:
 
         Note: a call to `update()` or `offline_update()` before `representative` is highly encouraged!!
         """
-        representative = self._account_info['representative']
-        return Account(representative, node_backend=self._node_backend, default_work_server=self._work_server)
+        representative_account_address = self._account_info['representative']
+        return self.accounts[representative_account_address]
 
     @property
     def weight(self):
@@ -456,7 +442,7 @@ class Account:
 
     @property
     def history(self):
-        return AccountHistory(self, node_backend=self._node_backend, work_server=self._work_server)
+        return AccountHistory(self, nano_network=self.network)
 
     def fill_account_info(self, account_info):
         """
@@ -481,7 +467,7 @@ class Account:
         """
         self._account_info = account_info
 
-    def build_send_block(self, account_target, nano_amount, work_hash=None):
+    def build_send_block(self, account_target, nano_amount, work_hash=None, new_representative=None):
         """
         Builds and signs the send transaction block and returns it.
 
@@ -500,38 +486,46 @@ class Account:
             Hash result of work for this transaction. A WorkServer can be used to build the hash for an account.
             If None, it will try to use a local work server.
 
+        :param new_representative:
+            Representative account to set in this transaction (can be changed on any transaction). None to set the
+            same representative.
+
         :returns:
             Returns the send block, signed, ready to broadcast to the network.
         """
         if self._private_key is None:
             raise KeyError("No private key available for this account. Can't send valid blocks.")
 
-        if type(nano_amount) is not Amount:
-            nano_amount = Amount.from_NANO(str(nano_amount))
+        nano_amount = Amount(nano_amount)
 
         if type(account_target) is str:
-            account_target = Account(account_target, node_backend=self._node_backend, default_work_server=self._work_server)
+            account_target = self.accounts[account_target]
 
-        block_final_balance = (self.confirmed_balance - nano_amount)
-
-        if block_final_balance < 0:
+        if nano_amount > self.confirmed_balance:
             raise InsufficientFunds(f"Account {self.address} doesn't have enough funds ({self.confirmed_balance}) "
                                     f"to send the requested quantity ({nano_amount}).")
 
+        block_final_balance = (self.confirmed_balance - nano_amount)
+
         if work_hash is None:
 
-            if self._work_server is None:
+            if self.work_server is None:
                 raise WorkError("No work provided for the transaction.")
 
-            work_hash = self._work_server.generate_work_send(self)
+            work_hash = self.work_server.generate_work_send(self)
+
+        new_representative = new_representative if new_representative is not None else self.representative
+
+        if type(new_representative) is str:
+            new_representative = self.accounts.lazy_fetch(new_representative)
 
         block_state = self._craft_block_state(subtype="send", link=account_target.public_key,
-                                              balance=block_final_balance, representative=self.representative,
+                                              balance=block_final_balance, representative=new_representative,
                                               work_hash=work_hash)
 
         return block_state
 
-    def build_receive_block(self, pending_block, work_hash=None):
+    def build_receive_block(self, pending_block, work_hash=None, new_representative=None):
         """
         Builds and signs the receive transaction block for the specified pending block and returns it.
 
@@ -548,6 +542,10 @@ class Account:
 
         :param work_hash:
             work hash for the receive transaction.
+
+        :param new_representative:
+            Representative account object to set in this transaction (can be changed on any transaction). None to set
+            the same representative.
         """
 
         if self._private_key is None:
@@ -558,18 +556,23 @@ class Account:
 
         if work_hash is None:
 
-            if self._work_server is None:
+            if self.work_server is None:
                 raise WorkError("No work provided for the transaction.")
 
-            work_hash = self._work_server.generate_work_receive(self)
+            work_hash = self.work_server.generate_work_receive(self)
 
         send_block_hash = pending_block.hash
         block_amount = pending_block.amount
 
         block_final_balance = (self.confirmed_balance + block_amount)
 
+        new_representative = new_representative if new_representative is not None else self.representative
+
+        if type(new_representative) is str:
+            new_representative = self.accounts.lazy_fetch(new_representative)
+
         block_state = self._craft_block_state(subtype="receive", link=send_block_hash, balance=block_final_balance,
-                                              representative=self.representative, work_hash=work_hash)
+                                              representative=new_representative, work_hash=work_hash)
 
         return block_state
 
@@ -590,13 +593,13 @@ class Account:
 
         if work_hash is None:
 
-            if self._work_server is None:
+            if self.work_server is None:
                 raise WorkError("No work provided for the transaction.")
 
-            work_hash = self._work_server.generate_work_change(self)
+            work_hash = self.work_server.generate_work_change(self)
 
         if type(new_representative) is str:
-            new_representative = Account(new_representative, node_backend=self._node_backend, default_work_server=self._work_server, initial_update=False)
+            new_representative = self.accounts.lazy_fetch(new_representative)
 
         block_state = self._craft_block_state(subtype="change", link="0"*64, balance=self.confirmed_balance,
                                               representative=new_representative, work_hash=work_hash)
@@ -612,7 +615,7 @@ class Account:
             "preamble": "6".zfill(64),
             "account": self.public_key,
             "link": link,
-            "balance": balance.as_raw().to_hex(16),
+            "balance": balance.to_hex(16),
             "previous": self.frontier.hash,
             "representative": representative.public_key
         }
@@ -630,15 +633,19 @@ class Account:
             "type": "state",
             "subtype": subtype,
             "account": self.address,
-            "previous": self.frontier.hash,
+            "previous": self._account_info.get('frontier'),
             "representative": representative.address,
             "link": link,
-            "balance": balance.as_raw().int_str(),
+            "balance": str(balance),
             "signature": block_signature,
-            "work": work_hash
+            "work": work_hash,
+            "hash": block_hash
         }
 
-        return BlockState(self, block_json, block_hash, node_backend=self._node_backend, work_server=self._work_server)
+        block_factory = self.blocks.factory
+        block = block_factory.build(self, block_json)
+
+        return block
 
     def offline_update_representative(self, new_representative):
         """
@@ -649,255 +656,116 @@ class Account:
 
         """
 
-        if type(new_representative) is str:
-            new_representative = Account(new_representative, node_backend=self._node_backend, default_work_server=self._work_server)
+        if type(new_representative) is Account:
+            new_representative = new_representative.address
 
         self.offline_update({'representative': new_representative})
 
-
-class AccountHistory:
-    """
-    Manages the blocks history of a given account.
-
-    Provides a simple interface to access the account block history.
-    """
-    def __init__(self, account_owner, node_backend=NO_NODE, work_server=None):
+    def change_representative(self, new_account_representative, wait_confirmation=True, confirmation_timeout_secs=30):
         """
-        Constructor of the historic class.
-
-        :param account_owner:
-            Account object whose historic is wanted to be inspected.
-
-        :param node_backend:
-            A Node object pointing to a working Nano node.
-
-        :param work_server:
-            The work server to request work. Optional.
-        """
-        self._account_owner = account_owner
-        self._node_backend = node_backend
-        self._work_server = work_server
-
-    def __len__(self):
-        """
-        Returns the number of blocks published for this account.
-        """
-        return int(self._account_owner.block_count)
-
-    def __str__(self):
-        return f"{self._account_owner.address} History: {len(self)} blocks"
-
-    def __iter__(self):
-        for block_definition in self._customized_iter():
-            block = BlockFactory(self._node_backend, work_server=self._work_server).build_block_object(self._account_owner, block_definition)
-            yield block
-
-    def _customized_iter(self, offset=None, count=100, reverse=None):
-        """
-        Custom iterator for the block history of this account.
-
-        Allows to iterate using the RPC to go back and forth in the blocks history of the account.
-
-        :param offset:
-            Position to start the iteration from.
-
-        :param count:
-            Number of elements to iterate.
-
-        :param reverse:
-            Order of the iteration (Boolean flag).
-        """
-        previous = None
-        first = True
-
-        def request_history(prev_hash):
-            response = self._node_backend.ask(AccountMessages.ACCOUNT_HISTORY(
-                         self._account_owner.address,
-                         count=count,
-                         reverse=reverse,
-                         previous=prev_hash,
-                         offset=offset
-                     ))
-
-            if not response:
-                response = {
-                    'history': []
-                }
-
-            prev_hash = response.get('previous', None)
-            return response['history'], prev_hash
-
-        while previous is not None or first:
-            first = False
-            history, previous = request_history(previous)
-            yield from history
-
-    def __getitem__(self, block_indexes):
-        reverse = True
-
-        if type(block_indexes) is int:
-            block_indexes = slice(block_indexes, block_indexes)
-
-        start = block_indexes.start
-        end = block_indexes.stop
-
-        if end is not None:
-            end = end - 1
-
-        if start < 0:
-            reverse = False
-            start = start * -1
-
-        result = []
-        account_owner = self._account_owner
-        for i, block_definition in enumerate(self._customized_iter(start, reverse=reverse)):
-
-            block = BlockFactory(self._node_backend, work_server=self._work_server).build_block_object(account_owner, block_definition)
-            result.append(block)
-
-            if end is not None and ((reverse and i >= end-start) or (not reverse and i <= start-end)):
-                break
-
-        if start is not None and end is not None and start >= end:
-            result = result[0]
-
-        return result
+             Easy interface for changing the representative. Builds, signs and broadcasts the change block to the network.
 
 
-class AccountPendingHistory:
-    """
-    Interface for pending blocks.
+             Example:
+                 account.change_representative("nano_..")  # Changes the representative to "nano_..."
 
-    Gives an easy interface to deal with pending transactions.
+        :param new_account_representative:
+            Nano account (string "nano_..." or Account object) destination.
 
-    This is an iterable object, which also allows to filter the pending transactions by quantity or to skip small
-    transactions to avoid pending history spam attack.
-    """
+        :param wait_confirmation:
+            Boolean flag to wait for the network to confirm the block.
 
-    def __init__(self, account_owner, node_backend=NO_NODE, work_server=None):
-        """
-        Instance of the account pending transactions history class.
+        :param confirmation_timeout_secs:
+            Number of seconds to wait for confirmation of the block.
 
-        :param account_owner:
-            Account object owner of this history object.
-
-        :param node_backend:
-            A Node object pointing to a working Nano node.
-            Note that this class may work off-line, in case the pending history is serialized and locally updated.
-
-        :param work_server:
-            Work server to use by default. Optional.
-        """
-        self._account_owner = account_owner
-        self._node_backend = node_backend
-        self._work_server = work_server
-        self._pending_transactions = {}
-        self._last_update = "Unknown"
-
-    def __len__(self):
-        return len(self._pending_transactions)
-
-    def update(self, minimum_quantity=Amount(1), descending=True, count=10, clear_previous_cache=True):
-        """
-        Asks to the backend for a list of pending transaction hashes and then updates the internal cache.
-
-        :param minimum_quantity:
-            Filter by minimum quantity. It can be an Amount object or a string/integer in NANO units.
-
-        :param descending:
-            Sorts the hashes in descending order, showing first the higher amounts. This is True by default.
-
-        :param count:
-            Cache size (in number of hashes)
-
-        :param clear_previous_cache:
-            If True, the previous cache is cleared. Otherwise, old cached hashes are kept until manual confirmation.
-            By default it is True.
+        :return:
+            Returns the published block.
         """
 
-        if not self._node_backend.is_online:
-            raise NodeBackendRequiredError("A node backend is required")
+        block_result = self.build_change_representative_block(new_account_representative)
+        block_change = self.blocks.broadcast(block_result)
 
-        if type(minimum_quantity) is not Amount:
-            minimum_quantity = Amount(minimum_quantity)
+        # TODO: Confirmation should be handled also in virtual nodes environments.
+        # TODO: Confirmation should be handled by a centralized websocket service
+        if wait_confirmation:
+            block_change.wait_for_confirmation(timeout_seconds=confirmation_timeout_secs)
 
-        # We request the pending blocks to the network
-        response = self._node_backend.ask(AccountMessages.ACCOUNTS_PENDING([self._account_owner.address],
-                                                                           count=count,
-                                                                           sorting=descending,
-                                                                           minimum_balance=minimum_quantity.as_raw().int_str()))
+        return block_change
 
-        # We store the new block hashes into the cache
-        blocks = response['blocks'][self._account_owner.address]
-        if len(blocks) > 0:
-            self.offline_update(blocks, clear_previous_cache=clear_previous_cache)
-
-    def offline_update(self, pending_hashes, clear_previous_cache=True):
+    def send_nano(self, account_target, nano_amount, wait_confirmation=True, confirmation_timeout_secs=30):
         """
-        Updates the local pending hashes with the specified ones.
+        Easy interface for sending a transaction. Builds, signs and broadcasts the send block to the network.
 
-        :param pending_hashes:
-            Dictionary containing the {hash:{amount:x, source:y}} pending elements.
 
-        :param clear_previous_cache:
-            If True, the previous cache is cleared. Otherwise, old cached hashes are kept until manual confirmation.
-            By default it is True.
+        Example:
+            account.send_nano("nano_..", "0.01")  # Sends 0.01 Nano to the account 'nano_'
+
+
+        :param account_target:
+            Nano account (string "nano_..." or Account object) destination.
+
+        :param nano_amount:
+            Amount of Nano to send (string or Amount object).
+
+        :param wait_confirmation:
+            Boolean flag to wait for the network to confirm the block.
+
+        :param confirmation_timeout_secs:
+            Number of seconds to wait for confirmation of the block.
+
+        :return:
+            Returns the published block.
         """
+        block_result = self.build_send_block(account_target, nano_amount)
+        block_sent = self.blocks.broadcast(block_result)
 
-        if clear_previous_cache:
-            self._pending_transactions.clear()
+        # TODO: Confirmation should be handled also in virtual nodes environments.
+        if wait_confirmation:
+            block_sent.wait_for_confirmation(timeout_seconds=confirmation_timeout_secs)
 
-        block_factory = BlockFactory(self._node_backend, work_server=self._work_server)
+        return block_sent
 
-        blocks_cache = {
-            block_hash: block_factory.build_block_object(Account(block_def['source'],
-                                                                 node_backend=self._node_backend), {
-                'height': 'unknown',
-                'type': 'send',
-                'link_as_account': self._account_owner.address,
-                'amount': Amount(block_def['amount']),
-                'hash': block_hash,
-                'local_timestamp': 'Unknown'
-            }) for block_hash, block_def in pending_hashes.items()
-        }
-
-        self._pending_transactions.update(blocks_cache)
-        self._last_update = datetime.now()
-
-    def confirm_transaction(self, pending_hash):
+    def receive_nano(self, block_to_receive=None, wait_confirmation=True, confirmation_timeout_secs=30):
         """
-        Confirms the specified pending hash to remove it from the local cache without requiring querying the node.
-        """
-        if pending_hash in self._pending_transactions:
-            del self._pending_transactions[pending_hash]
+        Easy interface for receiving a transaction. Builds, signs and broadcasts the receive block to the network.
 
-    def __getitem__(self, index):
-        """
-        Retrieves a cached pending block by index.
 
-        :param index:
-            Local index of the pending block. Check len(pending_blocks) to know how many are there available.
-        """
-        return list(self._pending_transactions.values())[index]
+        Example:
+            account.receive_nano()  # Receives the next pending transaction (if any)
 
-    def __iter__(self):
-        """
-        Iterates over the local cached pending blocks.
-        Ensure to call update() or offline_update() first. Otherwise there won't be hashes to iterate.
-        """
-        for block in self._pending_transactions.values():
-            yield block
 
-    def to_dict(self):
-        """
-        Returns a dict representation of the object.
-        """
-        return dict(self._pending_transactions)
+        :param block_to_receive:
+            Pending transaction to receive (can be obtained from account.pending_transactions list). In case of None,
+            the method automatically peeks for the next pending transaction.
 
-    def __str__(self):
-        return f"[Account: {self._account_owner}] \n" \
-               f"Pending blocks: {len(self)}; \n" \
-               f"Last pending blocks update: {self._last_update}\n"
+        :param wait_confirmation:
+            Boolean flag to wait for the network to confirm the block.
 
-    def __repr__(self):
-        return str(self)
+        :param confirmation_timeout_secs:
+            Number of seconds to wait for confirmation of the block.
+
+        :return:
+            Returns the published block. None if no pending transactions.
+        """
+        if block_to_receive is None:
+            pending_transactions = self.pending_transactions
+
+            if len(pending_transactions) == 0:
+                return None  # Guard clause: no pending transactions. Nothing to do.
+
+            block_to_receive = pending_transactions[-1]
+
+        block_result = self.build_receive_block(block_to_receive)
+        block_received = self.blocks.broadcast(block_result)
+
+        if wait_confirmation:
+            block_received.wait_for_confirmation(timeout_seconds=confirmation_timeout_secs)
+
+        return block_received
+
+    def refcount(self):
+        """
+        Retrieves how many references to this account are active.
+        :return: the number of active references to this account.
+        """
+        return max(sys.getrefcount(self) - 3, 0)

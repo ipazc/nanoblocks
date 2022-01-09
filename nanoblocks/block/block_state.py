@@ -1,7 +1,5 @@
-import pandas as pd
-
 from nanoblocks.block.block import Block
-from nanoblocks.node.nanonode import NO_NODE
+from nanoblocks.currency import Amount
 
 
 class BlockState(Block):
@@ -11,7 +9,7 @@ class BlockState(Block):
     Gives an easy interface for state blocks.
     """
 
-    def __init__(self, account, block_definition, block_hash, node_backend=NO_NODE, work_server=None):
+    def __init__(self, account, block_definition, nano_network):
         """
         Constructor of the class
 
@@ -21,19 +19,17 @@ class BlockState(Block):
         :param block_definition:
             Dict returned by the Nano node containing all the information of the block.
 
-        :param block_hash:
-            Hash of this block
+        :param nano_network:
+            A network object giving access to node and work backends.
 
-        :param node_backend:
-            Node backend to contact.
-
-        :param work_server:
-            Work server object to use by default. Optional.
         """
-        super().__init__(account, block_definition, node_backend, work_server=work_server)
+        super().__init__(account, block_definition, nano_network=nano_network)
         self._block_definition = block_definition
-        self._node_backend = node_backend
-        self._block_hash = block_hash
+
+        if 'hash' in block_definition:
+            self._block_hash = block_definition['hash']
+            del block_definition['hash']
+
         self._account_owner = account
 
     def __hash__(self):
@@ -44,9 +40,7 @@ class BlockState(Block):
         """
         Retrieves the total balance of the account after block confirmation.
         """
-        from nanoblocks.currency import Amount
-
-        result = Amount(self._block_definition['balance'])
+        result = Amount(self._block_definition['balance'], unit="raw")
 
         return result
 
@@ -72,7 +66,7 @@ class BlockState(Block):
 
     @work.setter
     def work(self, value):
-        self._block_definition['work'] = work
+        self._block_definition['work'] = value
 
     @property
     def subtype(self):

@@ -126,7 +126,7 @@ class AccountMessages:
         https://docs.nano.org/commands/rpc-protocol/#accounts_pending
         """
         if minimum_balance is None:
-            minimum_balance = Amount("1").as_raw().int_str()
+            minimum_balance = str(Amount("1", unit="raw"))
 
         message = {
             "action": "accounts_pending",

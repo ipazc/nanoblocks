@@ -1,10 +1,10 @@
-NanoBlocks transactions
+nanoblocks transactions
 =======================
 
-Likely to all the functionality from the package, handling transactions in `NanoBlocks` is also simplified to the
+Likely to all the functionality from the package, handling transactions in `nanoblocks` is also simplified to the
 minimum expression, but it requires a deeper knowledge of the network to understand how and why it is structured as is.
 In the following sections we will try to explain what is behind blocks, work, transactions, how are they related to
-each other and how can be handled in `NanoBlocks`.
+each other and how can be handled in `nanoblocks`.
 
 What is a block?
 ----------------
@@ -64,7 +64,7 @@ This allows you to create and chain many blocks offline, and then publish them a
 
 Precaching work gives the illusion that Nano can be almost instant. And most of the times, it will be.
 
-`NanoBlocks` does not bundle the needed tools to generate work for a transaction, but this process can be relied to a nano node or a
+`nanoblocks` does not bundle the needed tools to generate work for a transaction, but this process can be relied to a nano node or a
 nano work server as follows:
 
 
@@ -79,7 +79,7 @@ nano work server as follows:
     >>> network = NanoNetwork(node, work_server=nano_work_server)
 
 There's a tool called `nano-work-server <https://github.com/nanocurrency/nano-work-server>`_. You may want to
-install it in case you want to play with transactions using `NanoBlocks`.
+install it in case you want to play with transactions using `nanoblocks`.
 
 
 Sending and receiving transactions

@@ -3,219 +3,62 @@ from time import sleep
 
 import pandas as pd
 
-from nanoblocks.exceptions.block_not_broadcastable_error import BlockNotBroadcastableError
-from nanoblocks.node.nanonode import NO_NODE
-from nanoblocks.protocol.messages import NodeMessages, NetworkMessages
+from nanoblocks.base import NanoblocksClass
 
 
-# This is the first block in every uncreated account. It doesn't exist in the network.
-_FIRST_BLOCK = {
-    "subtype": "initial",
-    "confirmed": True,
-    "account": "all",
-    "amount": 0,
-    "local_timestamp": "n/A",
-    "height": 0,
-    "link_as_account": None,
-    "block_account": "nano_000000000000000000000000000000000000000000000000000000000000",
-    "block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-    "contents": {
-        "type": "initial",
-        "link_as_account": None,
-    },
-}
-
-
-class Blocks:
-    """
-    Handles the block interaction through the node API
-    """
-
-    def __init__(self, node_backend=NO_NODE, work_server=None):
-        """
-        Constructor of the class
-
-        :param node_backend:
-            A Node object pointing to a working Nano node.
-            Note that this class may work off-line, which allows the retrieval of public keys.
-
-        :param work_server:
-            Work server to use by default. Optional
-        """
-        self._node_backend = node_backend
-        self._work_server = work_server
-
-    def __getitem__(self, block_hash):
-        """
-        Retrieves a specific block information
-
-        :param block_hash:
-            Address of the account. Eg "nano_..."
-        """
-        from nanoblocks.block.block_factory import BlockFactory
-        from nanoblocks.account.account import Account
-
-        if block_hash == _FIRST_BLOCK['block_hash']:
-            response = _FIRST_BLOCK
-            account = None
-
-        else:
-            response = self._node_backend.ask(NodeMessages.BLOCK_INFO(block_hash))
-            account = Account(response['block_account'], node_backend=self._node_backend, initial_update=False)
-
-        block_info = {
-            'type': response.get('subtype', response.get('contents', {'type': 'Unknown'})['type']),
-            'confirmed': response.get('confirmed', False),
-            'account': response['block_account'],
-            'amount': response['amount'],
-            'local_timestamp': response['local_timestamp'],
-            'height': response['height'],
-            'link_as_account': response['contents'].get('link_as_account', None),
-            'hash': block_hash
-        }
-
-        block = BlockFactory(self._node_backend, work_server=self._work_server).build_block_object(account, block_info)
-        return block
-
-    def __len__(self):
-        """
-        Returns the number of blocks in the network, in case the backend is available.
-        """
-        response = self._blocks_telemetry()
-
-        if not response:
-            response = {'count': 0}
-
-        return int(response['count'])
-
-    def _blocks_telemetry(self):
-        return self._node_backend.ask(NodeMessages.BLOCK_COUNT())
-
-    def broadcast(self, block):
-        """
-        Broadcasts the given block to the network and returns the processed block.
-
-        Under offline environments, the block will not be broadcasted to the nodes. Instead, it will be updated locally.
-        This allows to update an account ledger offline, and accumulate the state blocks by chaining their hashes.
-        Those accumulated state blocks can be later used to broadcast in batch to a NanoNetwork object with a node set.
-
-        The offline collected blocks are only valid while the online ledger for the account is not modified by a third
-        party. Remember that all the offline blocks are chained among them, being the first one chained with the last
-        known frontier of the account.
-
-        Important: the account being updated must be already instantiated and the python's Account object must be
-        linked to the block. The network does not hold this information in offline environments. An example of this
-        problem below.
-
-            Wrong example:
-                >>> account1 = NanoNetwork.wallet["seed"].accounts[0]
-                >>> account2 = NanoNetwork.wallet["seed"].accounts[0] # same account actually, but second instance
-                >>> receive_block = account1.build_receive_block(work_hash)
-                >>> NanoNetwork.blocks.broadcast(receive_block)
-                >>> receive_block2 = account2.build_receive_block(work_hash2) ## Account2 does not reflect changes in account 1, even though they point to the same address!!
-
-            Correct example:
-                >>> account = NanoNetwork.wallet["seed"].accounts[0]
-                >>> receive_block = account.build_receive_block(work_hash)
-                >>> NanoNetwork.blocks.broadcast(receive_block)
-                >>> receive_block2 = account.build_receive_block(work_hash2) ## Using the same account object is mandatory for correct chain updates.
-
-            Alternatively:
-                >>> account1 = NanoNetwork.wallet["seed"].accounts[0]
-                >>> account2 = NanoNetwork.wallet["seed"].accounts[0] # same account actually, but second instance
-                >>> receive_block = account1.build_receive_block(work_hash)
-                >>> account1.offline_update_by_block(receive_block)
-                >>> account2.offline_update_by_block(receive_block)
-                >>> receive_block2 = account2.build_receive_block(work_hash2)
-
-
-        :param block:
-            Block Status to broadcast to the network
-        """
-        if not block.broadcastable:
-            raise BlockNotBroadcastableError("The specified block does not have any signature nor work attached. "
-                                             "Can't be broadcasted to the network or updated locally.")
-
-        if self._node_backend.is_online:
-            # Node available. Bubble up the update of the account ledger to the node.
-            response = self._node_backend.ask(NodeMessages.PROCESS(block.to_dict()))
-
-            if 'error' in response:
-                raise Exception(response['error'])
-
-            block_hash = response['hash']
-            block_result = self[block_hash]
-            account = block.account_owner
-            account.offline_update_by_block(block)
-
-        else:
-            # No node available. Update the account ledger offline
-            account = block.account_owner
-            account.offline_update_by_block(block)
-            block_result = block
-
-        return block_result
-
-    def __str__(self):
-        blocks_info = self._blocks_telemetry()
-        return f"Blocks ({str(self._node_backend)})\n\tBlocks count: {blocks_info['count']}; Unchecked: " \
-               f"{blocks_info['unchecked']}; Cemented: {blocks_info['cemented']}"
-
-
-class Block:
+class Block(NanoblocksClass):
     """
     Represents a block in the Nano network.
 
     Gives an easy interface to access the metadata of the block.
     """
 
-    def __init__(self, account, block_definition, node_backend=NO_NODE, work_server=None):
+    def __init__(self, account, block_definition, nano_network):
         """
         Constructor of the class
 
         :param block_definition:
             Dict returned by the Nano node containing all the information of the block.
 
-        :param node_backend:
-            Node backend to contact.
+        :param nano_network:
+            A network object giving access to node and work backends.
 
-        :param work_server:
-            Work server to generate work. Optional.
         """
+        super().__init__(nano_network)
         self._block_definition = block_definition
-        self._node_backend = node_backend
-        self._work_server = work_server
         self._account_owner = account
 
     @classmethod
-    def from_dict(cls, dict_data, node_backend=NO_NODE, work_server=None):
+    def from_dict(cls, dict_data, nano_network, initial_update=True):
         """
         Builds the block from a definition dictionary
         """
-        from nanoblocks.account.account import Account
-        account = Account(dict_data['account'], node_backend=node_backend, default_work_server=work_server)
-        cls(account, dict_data, node_backend=node_backend, work_server=work_server)
+        if initial_update:
+            account = nano_network.accounts[dict_data['account']]
+        else:
+            account = nano_network.accounts.lazy_fetch(dict_data['account'])
 
-    def wait_for_confirmation(self, timeout_seconds=30):
+        return cls(account, dict_data, nano_network=nano_network)
+
+    def wait_for_confirmation(self, timeout_seconds=30, check_interval_secs=1):
         """
         Waits until the block has been confirmed.
         This method forces a confirmation on the block and waits until it has been solved.
         """
-        if self._node_backend is None:
-            raise Exception("A node backend is required to confirm the block!")
 
         if self.confirmed:
             return True
 
         # We ask our node to request confirmation for the block
-        self._node_backend.ask(NodeMessages.BLOCK_CONFIRM(self.hash))
+        self.node_backend.block_confirm(self.hash)
 
         # Now we wait until the block is confirmed
         start_time = datetime.datetime.now()
 
         while (datetime.datetime.now() - start_time).total_seconds() < timeout_seconds and not self.confirmed:
-            sleep(2)
+            sleep(check_interval_secs)
 
+        # TODO: Confirmation should be centralized by a service that uses websockets if available.
         if not self.confirmed:
             raise Exception("Could not confirm the block in the requested timeout window.")
 
@@ -228,7 +71,7 @@ class Block:
         if self._block_definition.get('confirmed', False) in ['true', True]:
             return True
 
-        confirmed = self._node_backend.ask(NodeMessages.BLOCK_INFO(self.hash))['confirmed'] == 'true'
+        confirmed = self.node_backend.block_info(self.hash).get('confirmed', False) == 'true'
 
         self._block_definition['confirmed'] = confirmed
 
@@ -247,6 +90,10 @@ class Block:
         return self._block_definition['type']
 
     @property
+    def subtype(self):
+        return self._block_definition.get('subtype', None)
+
+    @property
     def account_owner(self):
         return self._account_owner
 
@@ -257,7 +104,7 @@ class Block:
         return self._block_definition
 
     def __str__(self):
-        str_result = f"[Block #{self.height} from account {self.account_owner.address}]\n\tType: {self.type}\n\t" \
+        str_result = f"[Block #{self.height} from account {self.account_owner.address}]\n\tType: {self.subtype if self.subtype is not None else self.type}\n\t" \
                f"Hash: {self.hash}\n"
 
         return str_result
@@ -274,7 +121,7 @@ class Block:
 
         m_datetime = pd.to_datetime(
             pd.Timestamp(int(block_time) * 1000000000).to_pydatetime()).tz_localize(
-            "UTC").tz_convert(self._node_backend.timezone)
+            "UTC").tz_convert(self.node_backend.timezone)
 
         return m_datetime
 
@@ -297,3 +144,10 @@ class Block:
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def is_first(self):
+        """
+        Retrieves whether this block is the first (all 0s) or not
+        """
+        return str(self.hash) == "0000000000000000000000000000000000000000000000000000000000000000"

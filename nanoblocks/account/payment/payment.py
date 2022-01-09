@@ -1,5 +1,4 @@
 import asyncio
-import concurrent
 import json
 import time
 from datetime import datetime
@@ -7,10 +6,12 @@ from datetime import datetime
 import qrcode
 import websockets
 
-from nanoblocks.block.block import Blocks
+from nanoblocks.base import NanoblocksClass
 from nanoblocks.currency import Amount
 from nanoblocks.exceptions.payment_timeout_error import PaymentTimeoutError
 from nanoblocks.protocol.messages.node_messages import NodeWebSocketMessages
+
+# TODO: Crear un gestor de websockets a nivel NanoNetwork para controlar las suscripciones de pagos y confirmaciones.
 
 
 async def subscribe_to_account(uri, addresses, payment_init, timeout, desired_amount):
@@ -28,12 +29,12 @@ async def subscribe_to_account(uri, addresses, payment_init, timeout, desired_am
             if result.get('topic', None) != "confirmation":
                 continue
 
-            if desired_amount is None or Amount(result['message']['amount']) == desired_amount:
+            if desired_amount is None or Amount(result['message']['amount'], unit="raw") == desired_amount:
                 # Payment received!
                 paid = True
                 paid_hash = result['message']['hash']
                 paid_source = result['message']['account']
-                paid_amount = Amount(result['message']['amount'])
+                paid_amount = Amount(result['message']['amount'], unit="raw")
 
     return paid, paid_hash, paid_source, paid_amount
 
@@ -53,32 +54,31 @@ async def subscribe_to_account_by_handler(uri, addresses, desired_amount, async_
             if result.get('topic', None) != "confirmation":
                 continue
 
-            if desired_amount is None or Amount(result['message']['amount']) == desired_amount:
+            if desired_amount is None or Amount(result['message']['amount'], unit="raw") == desired_amount:
                 paid_hash = result['message']['hash']
                 paid_source = result['message']['account']
-                paid_amount = Amount(result['message']['amount'])
+                paid_amount = Amount(result['message']['amount'], unit="raw")
 
                 finish = await async_handler_func(paid_hash, paid_source, paid_amount)
 
     return True
 
 
-class Payment:
+class Payment(NanoblocksClass):
     """
     Gives an easy interface to handle payments for a given account.
     """
 
-    def __init__(self, account_owner, amount, node_backend, work_server):
+    def __init__(self, account_owner, amount, nano_network):
+        super().__init__(nano_network)
         self._account_owner = account_owner
         self._amount = amount
-        self._node_backend = node_backend
-        self._work_server = work_server
 
         # First we ensure the account is up-to-date
         self._account_owner.update()
 
         # We take the current balance
-        self._initial_balance = self._account_owner.balance.as_raw()
+        self._initial_balance = self._account_owner.balance.as_unit("raw")
         self._last_confirmation_hash = None
 
         if self._account_owner.is_virtual:
@@ -94,7 +94,7 @@ class Payment:
         uri = f"nano:{self._account_owner.address}"
 
         if self._amount is not None:
-            uri += f"?amount={(self._amount.as_raw().int_str())}"
+            uri += f"?amount={str(self._amount)}"
 
         return uri
 
@@ -129,7 +129,7 @@ class Payment:
         amount = self._amount
 
         if amount is None:
-            amount = Amount("1")
+            amount = Amount("1 raw")
 
         self._account_owner.update()
 
@@ -138,17 +138,17 @@ class Payment:
 
             payment_init = datetime.now()
 
-            if self._node_backend.ws_available:
+            if self.node_backend.ws_available:
                 try:
 
-                    paid, paid_hash, paid_source, paid_amount = asyncio.get_event_loop().run_until_complete(subscribe_to_account(self._node_backend.ws,
-                                                                                                       [self._account_owner.address],
-                                                                                                       payment_init, timeout, self._amount))
+                    paid, paid_hash, paid_source, paid_amount = asyncio.get_event_loop().run_until_complete(subscribe_to_account(self.node_backend.ws,
+                                                                                                                                 [self._account_owner.address],
+                                                                                                                                 payment_init, timeout, self._amount))
 
-                except concurrent.futures._base.TimeoutError:
+                except TimeoutError:
                     raise PaymentTimeoutError(f"Payment timeout ({timeout} seconds)") from None
 
-                last_pending_block = Blocks(self._node_backend, self._work_server)[paid_hash]
+                last_pending_block = self.blocks[paid_hash]
 
             else:
 
@@ -158,7 +158,8 @@ class Payment:
                     if self._account_owner.is_virtual:
                         # If it is virtual (a new account) we need to check the pending blocks instead
                         pending_transactions = self._account_owner.pending_transactions.update(minimum_quantity=amount, count=100)
-                        paid = len(self._account_owner.pending_transactions) > 0
+                        # paid = len(self._account_owner.pending_transactions) > 0
+                        paid = len(pending_transactions) > 0
                     else:
                         self._account_owner.update()
                         new_balance = self._account_owner.balance
@@ -186,9 +187,9 @@ class Payment:
         Requires the WS version of the node.
         """
 
-        if not self._node_backend.ws_available:
+        if not self.node_backend.ws_available:
             raise Exception("WS backend is required for an async handler.")
 
         asyncio.get_event_loop().run_until_complete(
-            subscribe_to_account_by_handler(self._node_backend.ws, [self._account_owner.address], self._amount,
+            subscribe_to_account_by_handler(self.node_backend.ws, [self._account_owner.address], self._amount,
                                             async_handler_func))

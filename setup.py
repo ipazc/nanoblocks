@@ -32,6 +32,8 @@ setup(name='nanoblocks',
           "pandas>=1.1.0",
           "numpy>=1.18.1",
           "tzlocal>=2.1",
+          "joblib>=0.15.1",
+          "websockets>=8.1",
       ],
       classifiers=[
           'Environment :: Console',

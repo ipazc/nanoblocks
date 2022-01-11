@@ -1,5 +1,3 @@
-import sys
-
 from nanoblocks import rcParams
 from nanoblocks.account.account import Account
 from nanoblocks.base import NanoblocksClass

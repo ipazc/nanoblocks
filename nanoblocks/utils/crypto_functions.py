@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pkg_resources
 
-from nanoblocks.protocol.crypto.ed25519.ed25519 import publickey_unsafe, signature_unsafe
+from nanoblocks.protocol.crypto.ed25519 import publickey_unsafe, signature_unsafe
 
 
 # These are the maps used by the 32-base encoding algorithm

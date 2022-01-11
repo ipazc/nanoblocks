@@ -1,7 +1,7 @@
 from nanoblocks.block import Blocks
 from nanoblocks.account import Accounts
 from nanoblocks.currency import Amount
-from nanoblocks.node import NINJA_NODE
+from nanoblocks.node import PUBLIC_FAILOVER_NODE
 from nanoblocks.work import LOCAL_WORK_SERVER
 from nanoblocks.wallet import Wallets
 
@@ -10,7 +10,7 @@ class NanoNetwork:
     """
     This class represents the Nano network and provides methods to easily interact with it.
     """
-    def __init__(self, node_backend=NINJA_NODE, work_server=LOCAL_WORK_SERVER, cache_accounts=True):
+    def __init__(self, node_backend=PUBLIC_FAILOVER_NODE, work_server=LOCAL_WORK_SERVER, cache_accounts=True):
         """
         Creates an object that allows interaction with the Nano network through the specified node backend
         in several protocols (RPC through HTTP or WebSocket).
@@ -186,7 +186,7 @@ class NanoNetwork:
         return len(self._node_backend.representatives_online(weight=False)['representatives'])
 
     def __str__(self):
-        return f"{str(self._node_backend)} ({len(self)} peers; {len(self.accounts)} account)"
+        return f"[Nano Network] {len(self)} peers; {len(self.accounts)} accounts; node backend: \n {str(self._node_backend)}"
 
     def __repr__(self):
         return str(self)

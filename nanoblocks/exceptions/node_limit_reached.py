@@ -1,0 +1,3 @@
+
+class NodeLimitReached(Exception):
+    pass

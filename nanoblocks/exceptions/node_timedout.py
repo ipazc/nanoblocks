@@ -1,0 +1,3 @@
+
+class NodeTimedOut(Exception):
+    pass

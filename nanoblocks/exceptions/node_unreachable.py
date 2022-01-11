@@ -1,0 +1,3 @@
+
+class NodeUnreachable(Exception):
+    pass

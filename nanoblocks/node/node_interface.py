@@ -476,3 +476,12 @@ class NodeInterface:
         self._tape_record = TapeRecord()
         yield self._tape_record
         self._tape_record = None
+
+    def healthy(self):
+        """
+        Checks the health status for this node.
+
+        :return:
+            True if node can be used, False otherwise.
+        """
+        raise NotImplementedError()

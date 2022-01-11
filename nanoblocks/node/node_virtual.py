@@ -246,3 +246,6 @@ class NodeVirtual(NodeInterface):
             self._tape_record.append({'subtype': subtype, 'block_definition': block_definition})
 
         pass
+
+    def healthy(self):
+        return True

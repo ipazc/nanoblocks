@@ -1,5 +1,5 @@
 from nanoblocks.base import NanoblocksClass
-from nanoblocks.protocol.crypto.crypto_functions import make_seed, derive_seed, derive_bip39, fill_bip39_words
+from nanoblocks.utils.crypto_functions import make_seed, derive_seed, derive_bip39, fill_bip39_words
 from nanoblocks.wallet.wallet_accounts import WalletAccounts
 
 

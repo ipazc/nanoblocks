@@ -1,6 +1,12 @@
 import requests
 
+from nanoblocks import rcParams
+from nanoblocks.exceptions.node_limit_reached import NodeLimitReached
+from nanoblocks.exceptions.node_timedout import NodeTimedOut
+from nanoblocks.exceptions.node_unreachable import NodeUnreachable
 from nanoblocks.node.node_interface import NodeInterface, SYSTEM_TIMEZONE
+from nanoblocks.node.websocket.node_websocket import NodeWebsocket
+from nanoblocks.utils import cache
 
 
 class NodeRemote(NodeInterface):
@@ -12,6 +18,7 @@ class NodeRemote(NodeInterface):
         super().__init__(timezone=timezone)
         self._http_url = http_url
         self._ws_url = ws_url
+        self._ws_handler = NodeWebsocket(ws_url)
 
     @property
     def http_url(self):
@@ -21,13 +28,22 @@ class NodeRemote(NodeInterface):
     def ws_url(self):
         return self._ws_url
 
+    @property
+    def ws(self):
+        if not self._ws_handler.started:
+            self._ws_handler.start()
+
+        return self._ws_handler
+
     def __str__(self):
         base_str = f"[Node http={self.http_url}"
 
         if self._ws_url is not None:
             base_str += f"; ws={self.ws_url}"
 
-        base_str += f" ({self.version['node_vendor']})]"
+        vendor = self.version['node_vendor']
+
+        base_str += f" ({vendor})]"
         return base_str
 
     def __repr__(self):
@@ -40,10 +56,25 @@ class NodeRemote(NodeInterface):
         :param message:
             A crafted JSON message.
         """
-        response = requests.post(self.http_url, json=message).json()
+        timeout_seconds = rcParams['requests.timeout']
+
+        try:
+            response = requests.post(self.http_url, json=message, timeout=timeout_seconds).json()
+
+        except requests.Timeout:
+            raise NodeTimedOut(f"Node didn't answer for {timeout_seconds} seconds. Timed out.") from None
+
+        except requests.ConnectionError:
+            raise NodeUnreachable(f"Couldn't connect to node. Is it online?") from None
+
+        # Detection of many requests issue on some public nodes
+        if response.get('message') == 'Too Many Requests':
+            raise NodeLimitReached("Reached maximum requests quota for this node. Wait a few minutes for it to be released or use another node (check nanoblocks.node for other public nodes or mount your own node to avoid this issue).")
+
         return response
 
     @property
+    @cache(seconds=100, cache_parameters=False)  # We cache some queries for a few seconds so that node spam is avoided.
     def version(self):
         message = {
             "action": "version"
@@ -51,6 +82,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=100, cache_parameters=False)
     def available_supply(self):
         message = {
             "action": "available_supply"
@@ -58,6 +90,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=100, cache_parameters=True)
     def active_difficulty(self, include_trend=False):
         message = {
             "action": "active_difficulty",
@@ -66,6 +99,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=100, cache_parameters=False)
     def peers(self):
         message = {
             "action": "peers"
@@ -73,6 +107,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=4, cache_parameters=False)
     def telemetry(self):
         message = {
             "action": "telemetry"
@@ -80,6 +115,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=30, cache_parameters=True)
     def representatives(self, count=None, sorting=False):
         message = {
             "action": "representatives",
@@ -91,6 +127,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=30, cache_parameters=True)
     def representatives_online(self, weight=True, accounts=None):
         message = {
             "action": "representatives_online",
@@ -102,6 +139,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def account_info(self, nano_address, representative=False, weight=False, pending=True, include_confirmed=False):
         message = {
             "action": "account_info",
@@ -114,6 +152,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def account_history(self, nano_address, raw=False, count=10, previous=None, head=None, reverse=None, offset=None,
                         account_filter=None):
         message = {
@@ -142,6 +181,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def accounts_balances(self, addresses):
         message = {
             "action": "accounts_balances",
@@ -150,6 +190,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def accounts_frontiers(self, addresses):
         message = {
             "action": "accounts_frontiers",
@@ -158,6 +199,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def accounts_pending(self, accounts, threshold=None, source=False, count=1, include_active=False, sorting=True,
                          include_only_confirmed=True):
 
@@ -176,6 +218,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def block_count(self, include_cemented=True):
         message = {
             "action": "block_count"
@@ -183,6 +226,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def block_info(self, block_hash, json_block=True):
         message = {
             "action": "block_info",
@@ -192,6 +236,7 @@ class NodeRemote(NodeInterface):
 
         return self._ask(message)
 
+    @cache(seconds=1, cache_parameters=True)
     def blocks_info(self, blocks_hashes, json_block=True, include_not_found=False):
         message = {
             "action": "blocks_info",
@@ -236,3 +281,10 @@ class NodeRemote(NodeInterface):
         # noinspection PyProtectedMember
         snapshot._snapshot_struct['snapshot_node_source'] = self.http_url
         return snapshot
+
+    def healthy(self):
+        try:
+            self.telemetry()
+            return True
+        except (NodeUnreachable, NodeTimedOut, NodeLimitReached) as e:
+            return False

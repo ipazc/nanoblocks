@@ -1,7 +1,7 @@
 <div style="background: #c6e4f7; width:100%;margin:5px; color: #000000; border: 1px solid black; border-radius: 10px; cursor: text;">
     <div style="display:flex; flex-direction:row; text-align: center;border-bottom:1px solid black; padding:5px; background: #6677bd; color: #ffffff; border-top-left-radius: 10px; border-top-right-radius: 10px;">
         <div style="width: 10%; text-align:left; display:flex; flex-direction:row;">#{block_num} <div title="Confirmation of block. A green tick indicates that block was confirmed by the network and can be trusted." style="width: 15px; height:15px; margin-top:3px;">{confirmed_img}</div></div>
-        <div style="width: 90%; text-align:center;">{account_address} <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{account_address}');">{copy_to_clipboard_image}</button></div>
+        <div style="width: 90%; text-align:center;"><a style="color: #00385b;" href="https://nanolooker.com/account/{account_address}">{account_address}</a> <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{account_address}');">{copy_to_clipboard_image}</button></div>
     </div>
     <div style="display: flex; flex-direction: column;">
         <div style="display: flex; flex-direction: row; width: 100%; ">
@@ -14,8 +14,8 @@
 
             <div style="display: flex; flex-direction: column; width: 80%; border-left: 1px solid black;">
                 <div style="padding:5px; text-align: left; border-bottom: 1px solid black;">Block type: {block_type}</div>
-                <div style="padding:5px; text-align: left; border-bottom: 1px solid black;">Block hash: {block_hash}  <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{block_hash}');">{copy_to_clipboard_image}</button></div>
-                <div style="padding:5px; text-align: left; border-bottom: 1px solid black;">Destination account: {source_account}  <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{source_account}');">{copy_to_clipboard_image}</button></div>
+                <div style="padding:5px; text-align: left; border-bottom: 1px solid black;">Block hash: <a style="color: #00385b;" href="https://nanolooker.com/block/{block_hash}">{block_hash}</a>  <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{block_hash}');">{copy_to_clipboard_image}</button></div>
+                <div style="padding:5px; text-align: left; border-bottom: 1px solid black;">Source account: <a style="color: #00385b;" href="https://nanolooker.com/account/{source_account}">{source_account}</a>  <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{source_account}');">{copy_to_clipboard_image}</button></div>
                 <div title="Amount" style="text-align: left; border-bottom: 0px solid black; padding: 5px;"><button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; margin-top:2px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{amount_str}');">{total_balance_image}</button> {amount}</div>
             </div>
         </div>

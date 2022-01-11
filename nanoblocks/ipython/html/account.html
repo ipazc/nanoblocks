@@ -1,6 +1,6 @@
 <div style="background: #c6e4f7; width:100%;margin:5px; color: #000000; border: 1px solid black; border-radius: 10px; cursor: text;">
     <div style="text-align: center;border-bottom:1px solid black; padding:5px; background: #6677bd; color: #ffffff; border-top-left-radius: 10px; border-top-right-radius: 10px;">
-        <div>{is_virtual}{account_address} <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{account_address}');">{copy_to_clipboard_image}</button></div>
+        <div>{is_virtual} <a style="color: #00385b;" href="https://nanolooker.com/account/{account_address}">{account_address}</a> <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{account_address}');">{copy_to_clipboard_image}</button></div>
     </div>
     <div style="display: flex; flex-direction: column;">
         <div style="display: flex; flex-direction: row; width: 100%; ">
@@ -18,7 +18,7 @@
                     <div title="Confirmed balance" style="text-align: center; width:50%; padding: 5px;"><button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; margin-top:2px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{confirmed_balance_str}');">{confirmed_balance_image}</button> {confirmed_balance}</div>
                     <div title="Pending balance" style="text-align: center; width:50%; padding: 5px;"><button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; margin-top:2px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{pending_balance_str}');">{pending_balance_image}</button> {pending_balance}</div>
                 </div>
-                <div title="Representative account" style="text-align: center; border-top: 1px solid black; padding: 5px;">Representative: {representative_address} <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{representative_address}');">{copy_to_clipboard_image}</button></div>
+                <div title="Representative account" style="text-align: center; border-top: 1px solid black; padding: 5px;">Representative: <a style="color: #00385b;" href="https://nanolooker.com/account/{representative_address}">{representative_address}</a> <button title="Copy to clipboard" style="cursor:pointer; border:0px; width:15px; background-color:#FFF0;" onclick="navigator.clipboard.writeText('{representative_address}');">{copy_to_clipboard_image}</button></div>
             </div>
         </div>
 

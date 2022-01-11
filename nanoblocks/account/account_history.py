@@ -41,7 +41,7 @@ class AccountHistory(NanoblocksClass):
         blocks_factory = self.blocks.factory
 
         for block_definition in self._customized_iter():
-            block = blocks_factory.build(self._account_owner, block_definition)
+            block = blocks_factory.build(self._account_owner, block_definition, type_key='subtype')
             yield block
 
     def filter(self, accounts_list):
@@ -97,7 +97,7 @@ class AccountHistory(NanoblocksClass):
                     'history': []
                 }
 
-            prev_hash = response.get('previous', None)
+            prev_hash = response.get('previous', response.get('next', None))
             return response['history'], prev_hash
 
         while previous is not None or first:
@@ -145,15 +145,15 @@ class AccountHistory(NanoblocksClass):
             # History blocks are already confirmed by default.
             block_definition['confirmed'] = True
 
-            # We iterate until we met the desired range
-            if i >= start_end_range:
-                break
-
             if 'subtype' not in block_definition:
                 continue  # We skip blocks without subtypes
 
             block = block_factory.build(account_owner, block_definition, type_key='subtype')
             result.append(block)
+
+            # We iterate until we met the desired range
+            if i+1 >= start_end_range:
+                break
 
         if len(result) == 1 and was_int:
             result = result[0]

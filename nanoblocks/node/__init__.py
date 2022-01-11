@@ -5,6 +5,7 @@ Nano node wrapper.
 
 from .node_remote import NodeRemote
 from .node_virtual import NodeVirtual
+from .failover.node_failover import NodeFailover
 
 
 # SOURCE: https://publicnodes.somenano.com/
@@ -16,5 +17,17 @@ POWERAPI_NODE = NodeRemote(http_url='https://proxy.powernode.cc/proxy', ws_url='
 
 NO_NODE = NodeVirtual()
 
-__all__ = ["NodeRemote", "NodeVirtual",
+# The NodeFailover ensures responses when a node fails.
+PUBLIC_FAILOVER_NODE = NodeFailover([
+    NINJA_NODE,
+    SOMENANO_NODE,
+    RAINSTORM_NODE,
+    NANOS_NODE,
+    POWERAPI_NODE,
+    NO_NODE,
+])
+
+
+__all__ = ["NodeRemote", "NodeVirtual", "NodeFailover",
+           "PUBLIC_FAILOVER_NODE",
            "RAINSTORM_NODE", "NINJA_NODE", "NANOS_NODE", "SOMENANO_NODE", "POWERAPI_NODE", "NO_NODE"]

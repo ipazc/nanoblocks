@@ -24,8 +24,16 @@ __changelog__ = [
             "Added cache layer for accounts in network class. Requesting same account provides same object no matter where. Once an account reference count goes to 0, the account is released.",
             "Added global configurations rcParams for handling display formats and global timeouts.",
             "Amount class now does not use Decimal backend due to a bug. Instead, recreated from scratch.",
-            "Added Jupyter notebooks for examples.",
-            "Added IPython widgets for accounts and blocks. Now Jupyter Notebooks show nice representations of these objects."
+            "Added Jupyter notebooks as examples.",
+            "Added IPython widgets for accounts and blocks. Now Jupyter Notebooks show nice representations of these objects.",
+            "Fixed account history retrieval issue not reporting more than 10 blocks when iterating slices."
+            "Fixed IPython block representations when using iterator on accounts history.",
+            "Added TimedVariable class with monotonic timers for handling elapsed times on certain variables.",
+            "Added a @cache decorator for certain node calls to avoid unnecesary spamming to the node (like telemetry for retrieving versions).",
+            "Added healthy attribute to nodes to know whether the node is responsive or not.",
+            "Added failover functionality for nodes and set as default backend (with 5 public nodes and a virtual) in out-of-the-box network objects.",
+            "Added centralization of websockets in a NodeWebsocket class handled by the node itself.",
+            "Added some exceptions and cleaned up unused code."
         ]
     },
     {

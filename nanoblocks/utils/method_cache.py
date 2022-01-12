@@ -79,7 +79,7 @@ def cache(seconds=1, cache_parameters=True):
             instance._cachemod_internal_cache = cache_dict
 
             # Then, build the caching key based on the function reference. It will include parameters if cache_parameters is True.
-            key = str(func) + ((str(*args) + str(**kwargs)) if cache_parameters else '')
+            key = str(func) + ((str(args) + str(kwargs)) if cache_parameters else '')
 
             result = cache_dict.get(key)
 

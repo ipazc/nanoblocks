@@ -1,5 +1,5 @@
 from nanoblocks.base import NanoblocksClass
-from nanoblocks.protocol.crypto import account_privkey, account_pubkey, account_address
+from nanoblocks.utils.crypto import account_privkey, account_pubkey, account_address
 
 
 class WalletAccounts(NanoblocksClass):

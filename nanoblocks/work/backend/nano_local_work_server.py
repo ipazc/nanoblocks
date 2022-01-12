@@ -1,7 +1,6 @@
 import hashlib
 import random
 from nanoblocks.account.account import Account
-from nanoblocks.protocol.messages.work_server_messages import WorkServerMessages
 from nanoblocks.work.work_server import WorkServer
 import warnings
 

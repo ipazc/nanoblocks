@@ -33,7 +33,9 @@ __changelog__ = [
             "Added healthy attribute to nodes to know whether the node is responsive or not.",
             "Added failover functionality for nodes and set as default backend (with 5 public nodes and a virtual) in out-of-the-box network objects.",
             "Added centralization of websockets in a NodeWebsocket class handled by the node itself.",
-            "Added some exceptions and cleaned up unused code."
+            "Added some exceptions and cleaned up unused code.",
+            "Added centralized websocket service for nodes (also with healthy checks for failover settings)",
+            "Modified payment API and block confirmations to use the centralized websocket service."
         ]
     },
     {

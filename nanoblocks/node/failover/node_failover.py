@@ -55,6 +55,9 @@ class NodeFailover(NodeRemote):
 
     @property
     def ws(self):
+        if self._target_node is None:
+            return None
+
         return self._target_node.ws
 
     def __str__(self):
@@ -90,14 +93,10 @@ class NodeFailover(NodeRemote):
         :return:
         """
         for node in self._nodes_list:
-            if node.healthy():
-                # We found a new node. We abort the current WebSocket connection in case it was detected
-                self.ws.stop()
+            if node.healthy() and node.ws.healthy():
                 self._target_node = node
-
-                # And we re-start the websocket connection with this new one
-                self.ws.start()
                 return
+
         raise NoHealthyNodesAvailable("No healthy nodes available in the failover list.")
 
     def _ask(self, message):

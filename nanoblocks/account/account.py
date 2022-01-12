@@ -18,7 +18,7 @@ from nanoblocks.exceptions.insufficient_funds import InsufficientFunds
 from nanoblocks.exceptions.work_error import WorkError
 from nanoblocks.ipython.html import get_html
 from nanoblocks.ipython.img import get_svg
-from nanoblocks.protocol.crypto import address_pubkey, account_pubkey, account_address, hash_block, sign_block
+from nanoblocks.utils.crypto import address_pubkey, account_pubkey, account_address, hash_block, sign_block
 from nanoblocks.utils.time import now
 
 

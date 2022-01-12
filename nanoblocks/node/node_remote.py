@@ -30,7 +30,7 @@ class NodeRemote(NodeInterface):
 
     @property
     def ws(self):
-        if not self._ws_handler.started:
+        if not self._ws_handler.running and self._ws_handler.healthy():
             self._ws_handler.start()
 
         return self._ws_handler

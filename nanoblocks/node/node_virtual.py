@@ -249,3 +249,7 @@ class NodeVirtual(NodeInterface):
 
     def healthy(self):
         return True
+
+    @property
+    def ws(self):
+        return None

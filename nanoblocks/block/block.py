@@ -40,27 +40,46 @@ class Block(NanoblocksClass):
 
         return cls(account, dict_data, nano_network=nano_network)
 
-    def wait_for_confirmation(self, timeout_seconds=30, check_interval_secs=1):
+    def wait_for_confirmation(self, timeout_seconds=30):
         """
         Waits until the block has been confirmed.
         This method forces a confirmation on the block and waits until it has been solved.
         """
-
         if self.confirmed:
             return True
 
-        # We ask our node to request confirmation for the block
-        self.node_backend.block_confirm(self.hash)
+        # At this point we don't know if block is confirmed, so we force node to confirm it:
+        self.request_confirmation(wait_time=timeout_seconds)
 
-        # Now we wait until the block is confirmed
-        start_time = datetime.datetime.now()
-
-        while (datetime.datetime.now() - start_time).total_seconds() < timeout_seconds and not self.confirmed:
-            sleep(check_interval_secs)
-
-        # TODO: Confirmation should be centralized by a service that uses websockets if available.
         if not self.confirmed:
-            raise Exception("Could not confirm the block in the requested timeout window.")
+            raise TimeoutError(f"Could not confirm the block in the requested timeout window ({timeout_seconds} seconds).")
+
+    def request_confirmation(self, wait_time=30):
+        """
+        Forces a request for confirmation of this block to the node.
+
+        :param wait_time: Number of seconds to wait for confirmation.
+        """
+        self._block_definition['confirmed'] = False
+
+        def confirmation_callback(block):
+            if block.hash == self.hash:
+                # match
+                self._block_definition['confirmed'] = True
+                return False  # This cancel the tracking
+
+            return False  # No need to retrieve more blocks
+
+        # So we subscribe for confirmation blocks
+        with self.network.track_confirmation_blocks([self.account_owner],
+                                                    confirmation_callback) as confirmation_tracking:
+
+            print(self.node_backend.block_confirm(self.hash))
+
+            # Then we wait for confirmation here.
+            confirmation_tracking.join(timeout_seconds=wait_time)
+
+        return self._block_definition['confirmed']
 
     @property
     def confirmed(self):

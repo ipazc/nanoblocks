@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from nanoblocks.block import Blocks
 from nanoblocks.account import Accounts
 from nanoblocks.currency import Amount
@@ -174,7 +176,7 @@ class NanoNetwork:
         representative_accounts = self.accounts[list(representatives)]
 
         for (representative_address, weight_value), representative_account in zip(representatives.items(), representative_accounts):
-            representative_account._account_info['weight'] = weight_obj['weight']
+            representative_account._account_info['weight'] = weight_value  #weight_obj['weight']
 
         return representative_accounts
 
@@ -196,3 +198,49 @@ class NanoNetwork:
         Returns the number of active nodes in the network
         """
         return int(self.telemetry.get('peer_count', 0))
+
+    @contextmanager
+    def track_confirmation_blocks(self, accounts_list, callback, *callback_args, **callback_kwargs):
+        """
+        Tracks all the confirmation blocks in the network and reports them through the callback.
+        This is a blocking method.
+
+        :param accounts_list:
+            List of accounts to track.
+
+        :param callback:
+            Callback to report every block. Must return True to keep tracking for new blocks, or False to abort the
+            process.
+
+        """
+        ws = self.node_backend.ws
+        blocks_factory = self.blocks.factory
+
+        # Accounts_list may contain Account objects or strings. We convert everything to Accounts.
+        accounts_list = [self.accounts.lazy_fetch(acc) for acc in accounts_list]
+
+        def cb_func(message):
+            # We convert the message json into a Block object
+            msg = message['message']
+
+            account_address = msg['account']
+            block_hash = msg['hash']
+            block_definition = msg['block']
+            block_definition['hash'] = block_hash
+            block_definition['amount'] = msg['amount']
+            block_definition['local_timestamp'] = int(message['time'])/1000
+
+            account = self.accounts.lazy_fetch(account_address)
+
+            block = blocks_factory.build(account, block_definition, type_key='subtype')
+            return callback(block, *callback_args, **callback_kwargs)
+
+        tracking = ws.track_confirmations([acc.address for acc in accounts_list], cb_func)
+
+        # Here we begin to store confirmed blocks in the buffer, even though not reporting yet
+        tracking.begin()
+
+        yield tracking
+
+        # Finally we close it
+        tracking.end()
